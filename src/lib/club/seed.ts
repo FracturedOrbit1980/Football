@@ -3,7 +3,6 @@ import type { ClubAgeGroup, DrillTemplate, SetupDiagram } from "@/lib/club/catal
 import { DEFAULT_PITCH_COLOR, type DrillBoard } from "@/lib/club/board";
 import { mergeLibraryBoards } from "@/lib/club/library-boards";
 import { clubLibrary } from "@/lib/club/library";
-import { placeOnU12Prem, playerId, SQUAD_TEAM_ID, U12_SQUAD } from "@/lib/club/roster";
 
 export interface ClubPlayer {
   id: string;
@@ -105,25 +104,12 @@ export interface ClubData {
 }
 
 export function createSeed(): ClubData {
-  const placed = placeOnU12Prem(
-    ensureYouthAges([]),
-    U12_SQUAD.map((player) => ({
-      id: playerId(player.name),
-      name: player.name,
-      squadNumber: player.squadNumber,
-      position: "Central midfielder",
-      positions: [] as string[],
-      teamId: SQUAD_TEAM_ID,
-      homework: "",
-      photo: "",
-    })),
-  );
   return {
     clubKind: "bnfc",
     customFormations: [],
-    ageGroups: placed.ageGroups,
+    ageGroups: ensureYouthAges([]),
     coaches: [],
-    players: placed.players,
+    players: [],
     drills: clubLibrary.map((drill) => ({
       ...drill,
       coachingPoints: [...drill.coachingPoints],
@@ -135,7 +121,7 @@ export function createSeed(): ClubData {
     weeklyReports: [],
     sessions: [],
     matches: [],
-    coachTeamId: placed.teamId,
+    coachTeamId: null,
     boards: mergeLibraryBoards({}),
     matchPitchColor: DEFAULT_PITCH_COLOR,
   };

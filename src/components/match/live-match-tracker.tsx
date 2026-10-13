@@ -17,7 +17,7 @@ import { TeamPicker, useCoachTeam } from "@/components/coach/team-picker";
 import { DEFAULT_PITCH_COLOR } from "@/lib/club/board";
 import { formatPosition, playsInGoal } from "@/lib/club/positions";
 import { useClubStore } from "@/stores/club-store";
-import { useMatchStore, type PlayerMatchState } from "@/stores/match-store";
+import { hydrateMatchStore, useMatchStore, type PlayerMatchState } from "@/stores/match-store";
 
 function formatClock(totalSeconds: number) {
   const mins = Math.floor(totalSeconds / 60);
@@ -40,6 +40,8 @@ export function LiveMatchTracker() {
   const setMatchPitchColor = useClubStore((state) => state.setMatchPitchColor);
   const saveCustomFormation = useClubStore((state) => state.saveCustomFormation);
   const loadSquad = useMatchStore((state) => state.loadSquad);
+  const matchHydrated = useMatchStore((state) => state.hydrated);
+  const matchId = useMatchStore((state) => state.matchId);
   const clubPlayers = useClubStore((state) => state.players);
   const { team } = useCoachTeam();
   const [selectedOff, setSelectedOff] = useState<string | null>(null);
@@ -60,7 +62,13 @@ export function LiveMatchTracker() {
   const teamName = team?.name ?? "Squad";
 
   useEffect(() => {
-    if (!teamId || isClockRunning || matchTimeSeconds > 0) return;
+    void hydrateMatchStore();
+  }, []);
+
+  useEffect(() => {
+    if (!matchHydrated || !teamId) return;
+    const live = useMatchStore.getState();
+    if (live.isClockRunning || live.bankedMs > 0) return;
     const squad = clubPlayers
       .filter((player) => player.teamId === teamId)
       .sort((a, b) => a.squadNumber - b.squadNumber)
@@ -76,12 +84,22 @@ export function LiveMatchTracker() {
     const next = squad.map((player) => `${player.playerId}:${player.position}`).join("|");
     if (current === next) return;
     loadSquad(squad);
-  }, [clubPlayers, isClockRunning, loadSquad, matchTimeSeconds, squadKey, teamId]);
+  }, [clubPlayers, isClockRunning, loadSquad, matchHydrated, matchTimeSeconds, squadKey, teamId]);
 
+  // The clock is derived from timestamps; this interval only refreshes the display,
+  // so throttled or suspended timers (locked phone, background tab) lose no time.
   useEffect(() => {
     if (!isClockRunning) return;
-    const interval = setInterval(() => tickSecond(), 1000);
-    return () => clearInterval(interval);
+    tickSecond();
+    const interval = setInterval(() => tickSecond(), 500);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") tickSecond();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [isClockRunning, tickSecond]);
 
   const onPitch = players.filter((player) => player.isOnPitch);
@@ -301,6 +319,7 @@ export function LiveMatchTracker() {
             className="h-14 min-w-36 text-base"
             onClick={() => {
               resetMatch();
+              setSaved(false);
               setSelectedOff(null);
               setSelectedOn(null);
             }}
@@ -316,13 +335,15 @@ export function LiveMatchTracker() {
             disabled={players.length === 0 || opponent.trim().length === 0}
             onClick={() => {
               if (!team) return;
+              useMatchStore.getState().tickSecond();
               saveMatch(
                 team.id,
                 opponent.trim(),
-                players.map((player) => ({
+                useMatchStore.getState().players.map((player) => ({
                   playerId: player.playerId,
                   minutesPlayed: player.minutesPlayed,
                 })),
+                matchId,
               );
               setSaved(true);
             }}
@@ -332,7 +353,7 @@ export function LiveMatchTracker() {
         </div>
         <p className="mt-3 text-center text-sm font-medium text-slate-300">
           {emptyMessage ? `${emptyMessage} ` : null}
-          {saved ? "Minutes saved. Players with time on the pitch are marked present." : null}{" "}
+          {saved ? "Minutes saved. Saving again updates this match. Players with time on the pitch are marked present." : null}{" "}
           Tap a player on the pitch, then a bench player, to substitute. Minutes accrue only while the clock runs.
         </p>
       </section>
