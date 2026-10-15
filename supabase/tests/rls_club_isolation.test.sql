@@ -137,12 +137,12 @@ SELECT throws_ok($$UPDATE public.players SET user_id = '00000000-0000-4000-8000-
   'account links are by invitation only');
 SELECT is((SELECT count(*) FROM public.players)::int, 3, 'club A admin sees all club A players');
 SELECT throws_ok($$SELECT public.register_player('10000000-0000-4000-8000-00000000000a', NULL, 'New', 'Kid', NULL, NULL, NULL,
-  'Parent', 'Mother', 'parent@example.test', '+27 82 222 2222', NULL, false)$$, 'P0001', 'Guardian consent is required',
+  'Parent', 'Mother', 'parent@example.test', '+27 82 222 2222', NULL, false, '2026-10-15')$$, 'P0001', 'Guardian consent is required',
   'registration needs guardian consent');
 SELECT isnt(public.register_player('10000000-0000-4000-8000-00000000000a', NULL, 'New', 'Kid', NULL, NULL, NULL,
-  'Parent', 'Mother', 'parent@example.test', '+27 82 222 2222', NULL, true), NULL, 'club admin registers a player with a guardian');
+  'Parent', 'Mother', 'parent@example.test', '+27 82 222 2222', NULL, true, '2026-10-15'), NULL, 'club admin registers a player with a guardian');
 SELECT throws_ok($$SELECT public.register_player('10000000-0000-4000-8000-00000000000b', NULL, 'Other', 'Club', NULL, NULL, NULL,
-  'Parent', 'Mother', 'parent@example.test', '+27 82 222 2222', NULL, true)$$, '42501', NULL,
+  'Parent', 'Mother', 'parent@example.test', '+27 82 222 2222', NULL, true, '2026-10-15')$$, '42501', NULL,
   'club A admin cannot register into club B');
 RESET ROLE;
 
