@@ -164,6 +164,7 @@ export interface Branding {
   backdrop_path: string | null;
   watermark_opacity: number;
   primary_color: string | null;
+  accent_color?: string | null;
 }
 
 export interface Invite {

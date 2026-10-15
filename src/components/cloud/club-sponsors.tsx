@@ -115,6 +115,7 @@ function SponsorsScreen() {
         >
           Save strength
         </Button>
+        <ClubColours clubId={clubId ?? ""} />
       </Panel>
 
       <Panel title="Add a sponsor">
@@ -182,5 +183,45 @@ function SponsorsScreen() {
         </ul>
       </Panel>
     </>
+  );
+}
+
+function ClubColours({ clubId }: { clubId: string }) {
+  const { branding, reload } = useBranding();
+  const [primary, setPrimary] = useState<string | null>(null);
+  const [accent, setAccent] = useState<string | null>(null);
+  const [message, setMessage] = useState("");
+  const shownPrimary = primary ?? branding?.primary_color ?? "#d16b6f";
+  const shownAccent = accent ?? branding?.accent_color ?? "#f8d058";
+  return (
+    <div className="mt-4 border-t border-slate-200 pt-4" data-club-colours>
+      <p className="text-sm font-bold text-slate-900">Club colours</p>
+      <p className="text-xs font-medium text-slate-600">Used for buttons, highlights and the menu for everyone in this club.</p>
+      <div className="mt-2 flex flex-wrap items-end gap-4">
+        <label className="text-sm font-semibold text-slate-800">
+          Main colour
+          <input type="color" aria-label="Main colour" value={shownPrimary} onChange={(event) => setPrimary(event.target.value)} className="mt-1 block h-11 w-20" />
+        </label>
+        <label className="text-sm font-semibold text-slate-800">
+          Accent colour
+          <input type="color" aria-label="Accent colour" value={shownAccent} onChange={(event) => setAccent(event.target.value)} className="mt-1 block h-11 w-20" />
+        </label>
+        <Button
+          type="button"
+          variant="secondary"
+          className="h-11"
+          onClick={async () => {
+            const { error } = await getCloud()!
+              .from("club_branding")
+              .upsert({ club_id: clubId, primary_color: shownPrimary, accent_color: shownAccent, updated_at: new Date().toISOString() });
+            setMessage(error ? errorText(error) : "Club colours saved.");
+            if (!error) reload();
+          }}
+        >
+          Save colours
+        </Button>
+      </div>
+      {message ? <p className="mt-2 text-sm font-semibold text-slate-800">{message}</p> : null}
+    </div>
   );
 }

@@ -99,6 +99,10 @@ export function BrandingProvider({ children }: { children: ReactNode }) {
     return { branding: null, logoUrl: localLogo, watermarkUrl: localLogo, backdropUrl: "", watermarkOpacity: 0.1, sponsors: [], reload };
   }, [cloud.activeClubId, cloud.enabled, localLogo, reload, remote]);
 
+  const primary = cloud.enabled ? value.branding?.primary_color ?? null : null;
+  const accent = cloud.enabled ? value.branding?.accent_color ?? null : null;
+  useEffect(() => applyClubColours(primary, accent), [primary, accent]);
+
   return <BrandingContext.Provider value={value}>{children}</BrandingContext.Provider>;
 }
 
@@ -164,4 +168,35 @@ export function SponsorStrip() {
       })}
     </div>
   );
+}
+
+const COLOUR_VARS = [
+  "--color-emerald-50", "--color-emerald-100", "--color-emerald-200", "--color-emerald-300", "--color-emerald-400",
+  "--color-emerald-500", "--color-emerald-600", "--color-emerald-700", "--color-emerald-800", "--primary", "--sidebar-primary",
+];
+
+/** Club mode: derive the theme scale from the club's own colours (Brand screen). */
+function applyClubColours(primary: string | null, accent: string | null) {
+  const style = document.documentElement.style;
+  if (!primary) {
+    for (const name of COLOUR_VARS) style.removeProperty(name);
+    return;
+  }
+  const tint = (pct: number) => `color-mix(in srgb, ${primary} ${pct}%, white)`;
+  const shade = (pct: number) => `color-mix(in srgb, ${primary} ${pct}%, black)`;
+  const gold = accent ?? "#f8d058";
+  const values: Record<string, string> = {
+    "--color-emerald-50": tint(6),
+    "--color-emerald-100": tint(18),
+    "--color-emerald-200": tint(32),
+    "--color-emerald-300": gold,
+    "--color-emerald-400": gold,
+    "--color-emerald-500": primary,
+    "--color-emerald-600": shade(82),
+    "--color-emerald-700": shade(66),
+    "--color-emerald-800": shade(82),
+    "--primary": primary,
+    "--sidebar-primary": primary,
+  };
+  for (const [name, colour] of Object.entries(values)) style.setProperty(name, colour);
 }
