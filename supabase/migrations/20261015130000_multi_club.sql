@@ -635,7 +635,7 @@ CREATE POLICY profiles_select_same_club ON public.profiles FOR SELECT TO authent
 -- ---------------------------------------------------------------------------
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 VALUES
-  ('club-logos', 'club-logos', false, 1048576, ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml']),
+  ('club-logos', 'club-logos', false, 1048576, ARRAY['image/png', 'image/jpeg', 'image/webp']),
   ('club-backdrops', 'club-backdrops', false, 3145728, ARRAY['image/png', 'image/jpeg', 'image/webp'])
 ON CONFLICT (id) DO NOTHING;
 

@@ -1,7 +1,7 @@
 -- pgTAP: club isolation and player self-access.
 -- Run with `npx supabase test db` or scripts/test-db.sh.
 BEGIN;
-SELECT plan(38);
+SELECT plan(41);
 
 -- Fixture (as the migration owner, so RLS does not apply yet).
 INSERT INTO auth.users (id, email) VALUES
@@ -136,6 +136,14 @@ SELECT throws_ok($$UPDATE public.players SET user_id = '00000000-0000-4000-8000-
   WHERE id = '40000000-0000-4000-8000-0000000000a3'$$, 'P0001', NULL,
   'account links are by invitation only');
 SELECT is((SELECT count(*) FROM public.players)::int, 3, 'club A admin sees all club A players');
+SELECT throws_ok($$SELECT public.register_player('10000000-0000-4000-8000-00000000000a', NULL, 'New', 'Kid', NULL, NULL, NULL,
+  'Parent', 'Mother', 'parent@example.test', '+27 82 222 2222', NULL, false)$$, 'P0001', 'Guardian consent is required',
+  'registration needs guardian consent');
+SELECT isnt(public.register_player('10000000-0000-4000-8000-00000000000a', NULL, 'New', 'Kid', NULL, NULL, NULL,
+  'Parent', 'Mother', 'parent@example.test', '+27 82 222 2222', NULL, true), NULL, 'club admin registers a player with a guardian');
+SELECT throws_ok($$SELECT public.register_player('10000000-0000-4000-8000-00000000000b', NULL, 'Other', 'Club', NULL, NULL, NULL,
+  'Parent', 'Mother', 'parent@example.test', '+27 82 222 2222', NULL, true)$$, '42501', NULL,
+  'club A admin cannot register into club B');
 RESET ROLE;
 
 -- ---- Platform admin creates clubs but cannot read player data -------------
