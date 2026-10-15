@@ -4,12 +4,24 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 
+import { isCloudMode } from "@/lib/cloud/client";
 import { createEmptyClub } from "@/lib/club/seed";
+import { BNFC_CLUB_ID } from "@/lib/club/registry";
 import { loadClubData, useClubStore } from "@/stores/club-store";
 import { useClubLibrary } from "@/stores/club-library";
 
+/** Routes backed by Supabase. They never read the on-device club store. */
+export function isCloudRoute(pathname: string) {
+  return /^\/(login|club|me|platform)(\/|$)/.test(pathname);
+}
+
 export function ClubProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  if (isCloudRoute(pathname)) return children;
+  return <LocalClubProvider pathname={pathname}>{children}</LocalClubProvider>;
+}
+
+function LocalClubProvider({ children, pathname }: { children: ReactNode; pathname: string }) {
   const hydrated = useClubStore((state) => state.hydrated);
   const ready = useClubLibrary((state) => state.ready);
   const activeId = useClubLibrary((state) => state.activeId);
@@ -21,6 +33,11 @@ export function ClubProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!ready) return;
+    if (!activeId && isCloudMode()) {
+      // Coach tools (drills, editor, live match) still keep their working data on this device.
+      void useClubLibrary.getState().load(BNFC_CLUB_ID);
+      return;
+    }
     if (!activeId) {
       useClubStore.persist.setOptions({ name: "bnfc-club-pending" });
       useClubStore.setState({ hydrated: true, ...createEmptyClub() });

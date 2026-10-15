@@ -28,6 +28,7 @@ import {
 import { MannequinFigure } from "@/components/pitch/mannequin-figure";
 import { useSlideTravel } from "@/components/drills/slide-motion";
 import { useClubStore } from "@/stores/club-store";
+import { PitchWatermark } from "@/components/cloud/branding";
 
 const SPEEDS = [0.5, 1, 2];
 
@@ -192,6 +193,7 @@ function DrillBoardEditor({
         <p className="mb-1 truncate text-sm font-semibold text-slate-800">
           {board.phase} · {minutes} min · {setup}
         </p>
+        <div className="relative">
         <svg
           ref={svgRef}
           viewBox={`${windowBox.x} ${windowBox.y} ${windowBox.width} ${windowBox.height}`}
@@ -244,6 +246,8 @@ function DrillBoardEditor({
             />
           ))}
         </svg>
+          <PitchWatermark />
+        </div>
       </div>
       <div className="mt-3 min-w-0 space-y-3">
         <ControlRow label="Field">
