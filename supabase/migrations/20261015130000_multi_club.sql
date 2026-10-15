@@ -182,6 +182,8 @@ CREATE TABLE public.guardians (
   phone text NOT NULL CHECK (phone ~ '^\+?[0-9 ()-]{9,20}$'),
   alt_phone text CHECK (alt_phone IS NULL OR alt_phone ~ '^\+?[0-9 ()-]{9,20}$'),
   is_primary boolean NOT NULL DEFAULT true,
+  -- POPIA: processing a child's personal information needs a competent person's consent.
+  consent_at timestamptz,
   created_at timestamptz NOT NULL DEFAULT now(),
   FOREIGN KEY (player_id, club_id) REFERENCES public.players (id, club_id) ON DELETE CASCADE
 );
@@ -417,8 +419,8 @@ BEGIN
   FOR v_invite IN
     SELECT * FROM public.club_invites WHERE lower(email::text) = v_email AND accepted_at IS NULL FOR UPDATE
   LOOP
-    INSERT INTO public.club_members (club_id, user_id, role)
-    VALUES (v_invite.club_id, v_uid, v_invite.role)
+    INSERT INTO public.club_members (club_id, user_id, role, display_name)
+    VALUES (v_invite.club_id, v_uid, v_invite.role, v_email)
     ON CONFLICT (club_id, user_id, role) DO NOTHING;
 
     IF v_invite.team_id IS NOT NULL THEN
@@ -462,19 +464,20 @@ CREATE OR REPLACE FUNCTION public.register_player(
   p_club uuid, p_team uuid, p_first_name text, p_last_name text, p_date_of_birth date,
   p_position text, p_squad_number integer,
   p_guardian_name text, p_guardian_relationship text, p_guardian_email text,
-  p_guardian_phone text, p_guardian_alt_phone text
+  p_guardian_phone text, p_guardian_alt_phone text, p_guardian_consent boolean
 )
 RETURNS uuid LANGUAGE plpgsql SECURITY INVOKER SET search_path = public AS $$
 DECLARE
   v_player uuid;
 BEGIN
   IF COALESCE(trim(p_guardian_email), '') = '' THEN RAISE EXCEPTION 'Guardian email is required'; END IF;
+  IF p_guardian_consent IS NOT TRUE THEN RAISE EXCEPTION 'Guardian consent is required'; END IF;
   INSERT INTO public.players (club_id, team_id, first_name, last_name, date_of_birth, position, squad_number)
   VALUES (p_club, p_team, trim(p_first_name), trim(p_last_name), p_date_of_birth, p_position, p_squad_number)
   RETURNING id INTO v_player;
-  INSERT INTO public.guardians (club_id, player_id, full_name, relationship, email, phone, alt_phone)
+  INSERT INTO public.guardians (club_id, player_id, full_name, relationship, email, phone, alt_phone, consent_at)
   VALUES (p_club, v_player, trim(p_guardian_name), p_guardian_relationship, lower(trim(p_guardian_email)),
-          trim(p_guardian_phone), NULLIF(trim(COALESCE(p_guardian_alt_phone, '')), ''));
+          trim(p_guardian_phone), NULLIF(trim(COALESCE(p_guardian_alt_phone, '')), ''), now());
   RETURN v_player;
 END;
 $$;
@@ -487,14 +490,14 @@ REVOKE ALL ON FUNCTION public.is_platform_admin(), public.is_club_member(uuid),
   public.is_team_staff(uuid, public.staff_role[]), public.player_team(uuid),
   public.is_own_player(uuid), public.staffs_player(uuid, public.staff_role[]),
   public.issue_player_card(uuid), public.claim_my_invites(), public.create_club(text, text, text),
-  public.register_player(uuid, uuid, text, text, date, text, integer, text, text, text, text, text),
+  public.register_player(uuid, uuid, text, text, date, text, integer, text, text, text, text, text, boolean),
   public.check_team_staff_member() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.is_platform_admin(), public.is_club_member(uuid),
   public.has_club_role(uuid, public.club_role[]), public.is_club_admin(uuid),
   public.is_team_staff(uuid, public.staff_role[]), public.player_team(uuid),
   public.is_own_player(uuid), public.staffs_player(uuid, public.staff_role[]),
   public.issue_player_card(uuid), public.claim_my_invites(), public.create_club(text, text, text),
-  public.register_player(uuid, uuid, text, text, date, text, integer, text, text, text, text, text)
+  public.register_player(uuid, uuid, text, text, date, text, integer, text, text, text, text, text, boolean)
   TO authenticated;
 
 ALTER TABLE public.platform_admins ENABLE ROW LEVEL SECURITY;
