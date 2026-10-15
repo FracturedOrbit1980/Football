@@ -119,3 +119,29 @@ migrations, and runs the tests.
 
 The drill library, drill editor, and live match tracker still keep their working data on the
 device, even in club mode.
+
+## Privacy (POPIA), offline and sync
+
+### Privacy notice
+- `/privacy/` (or `/privacy/?club=<club id>`) shows a POPIA notice built from the club's settings (Club home → Privacy notice). **This is a template. Have the club's lawyer review it before relying on it.**
+- The club is the responsible party. Admins fill in the information officer, address, hosting region and retention period. Supabase is listed as an operator.
+- Registration stores the policy version and the time of consent (`consents`, `guardians.consent_version`). Portal users acknowledge the notice, download their data as JSON and send access, correction or deletion requests (`data_requests`), which admins can see and close.
+- When the notice text changes, bump `PRIVACY_POLICY_VERSION` in `src/lib/privacy.ts` and the default in `club_privacy.policy_version`.
+
+### Offline
+`npm run build` runs `scripts/build-sw.mjs`, which writes `out/sw.js` with every exported page and `_next/static` asset to precache. It registers under the base path scope (`/Football/`).
+- Pages use the network first and fall back to the cache.
+- Static assets are served from the cache first.
+- Supabase requests are never cached.
+
+The drill library, editor and live match keep working with no connection.
+
+### Sync (club mode only; demo mode stays on the device)
+- Drills you create and saved matches are written locally, queued in IndexedDB (`football-sync`) and pushed to `club_drills` / `club_matches` when online. Each record holds formation, minutes, substitutions, events and score. Built-in library drills are not synced.
+- **Conflicts: last write wins on `updated_at`.** A database trigger ignores an update older than the stored row, and the device keeps whichever copy has the newer `updated_at`. If two devices edit the same record offline, the later edit replaces the earlier one completely; there is no field-level merge. Deletes are soft (`deleted_at`) so they sync too.
+- Club home → Sync has these controls:
+  - Sync on/off.
+  - Wi-Fi only. This works only where the browser reports the connection type (mostly Android Chrome). Elsewhere, automatic sync waits and you use "Sync now".
+  - "Sync now".
+- Signing out clears the sync queue and the club's local workspace from the device.
+- Matches are not yet linked to a club team (local team ids are not club team ids), so every coach in the club can see them.
