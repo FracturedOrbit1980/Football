@@ -119,8 +119,8 @@ function PlayersScreen() {
             <Field label="Guardian full name" required value={form.gName} onChange={set("gName")} />
             <Field label="Relationship" value={form.gRelationship} onChange={set("gRelationship")} />
             <Field label="Guardian email" type="email" required value={form.gEmail} onChange={set("gEmail")} />
-            <Field label="Guardian mobile" type="tel" required placeholder="+27 82 123 4567" pattern="\+?[0-9 ()\-]{9,20}" value={form.gPhone} onChange={set("gPhone")} />
-            <Field label="Other contact number" type="tel" pattern="\+?[0-9 ()\-]{9,20}" value={form.gAltPhone} onChange={set("gAltPhone")} />
+            <Field label="Guardian mobile" type="tel" required placeholder="+27 82 123 4567" pattern="\+?[0-9 \(\)\-]{9,20}" value={form.gPhone} onChange={set("gPhone")} />
+            <Field label="Other contact number" type="tel" pattern="\+?[0-9 \(\)\-]{9,20}" value={form.gAltPhone} onChange={set("gAltPhone")} />
             <label className="flex items-start gap-2 text-sm font-semibold text-slate-800 sm:col-span-2 lg:col-span-3">
               <input
                 type="checkbox"
