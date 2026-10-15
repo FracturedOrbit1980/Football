@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
+import type { MatchEvent } from "@/lib/club/seed";
+
 export interface PlayerMatchState {
   playerId: string;
   name: string;
@@ -30,6 +32,11 @@ interface MatchStore {
   matchTimeSeconds: number;
   isClockRunning: boolean;
   players: PlayerMatchState[];
+  /** Rotation log and goals, in match-clock milliseconds. */
+  events: MatchEvent[];
+  ourScore: number;
+  theirScore: number;
+  addGoal: (side: "for" | "against", delta: 1 | -1) => void;
   startMatchClock: () => void;
   pauseMatchClock: () => void;
   substitutePlayer: (playerOffId: string, playerOnId: string) => void;
@@ -64,6 +71,20 @@ export const useMatchStore = create<MatchStore>()(
       matchTimeSeconds: 0,
       isClockRunning: false,
       players: [],
+      events: [],
+      ourScore: 0,
+      theirScore: 0,
+      addGoal: (side, delta) => {
+        const state = get();
+        const key = side === "for" ? "ourScore" : "theirScore";
+        const next = Math.max(0, state[key] + delta);
+        if (next === state[key]) return;
+        const events =
+          delta === 1
+            ? [...state.events, { kind: side === "for" ? ("GOAL_FOR" as const) : ("GOAL_AGAINST" as const), atMs: elapsedMs(state) }]
+            : state.events;
+        set({ [key]: next, events } as Partial<MatchStore>);
+      },
       startMatchClock: () => {
         if (get().runningSince !== null) return;
         set({ runningSince: Date.now(), isClockRunning: true });
@@ -95,7 +116,10 @@ export const useMatchStore = create<MatchStore>()(
           if (player.playerId === playerOnId) return { ...player, isOnPitch: true, onSinceMs: clock };
           return player;
         });
-        set({ players: withMinutes(players, clock) });
+        set({
+          players: withMinutes(players, clock),
+          events: [...state.events, { kind: "SUB", atMs: clock, offId: playerOffId, onId: playerOnId }],
+        });
       },
       tickSecond: () => {
         const state = get();
@@ -104,6 +128,9 @@ export const useMatchStore = create<MatchStore>()(
       },
       loadSquad: (squad) =>
         set({
+          events: [],
+          ourScore: 0,
+          theirScore: 0,
           matchId: newMatchId(),
           runningSince: null,
           bankedMs: 0,
@@ -119,6 +146,9 @@ export const useMatchStore = create<MatchStore>()(
         }),
       resetMatch: () =>
         set((state) => ({
+          events: [],
+          ourScore: 0,
+          theirScore: 0,
           matchId: newMatchId(),
           runningSince: null,
           bankedMs: 0,
@@ -143,10 +173,13 @@ export const useMatchStore = create<MatchStore>()(
         runningSince: state.runningSince,
         bankedMs: state.bankedMs,
         players: state.players,
+        events: state.events,
+        ourScore: state.ourScore,
+        theirScore: state.theirScore,
       }),
       merge: (persisted, current) => {
         const saved = (persisted ?? {}) as Partial<MatchStore>;
-        const next = { ...current, ...saved, hydrated: true };
+        const next = { ...current, ...saved, events: saved.events ?? [], ourScore: saved.ourScore ?? 0, theirScore: saved.theirScore ?? 0, hydrated: true };
         const clock = elapsedMs(next);
         return {
           ...next,

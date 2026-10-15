@@ -42,6 +42,9 @@ export function LiveMatchTracker() {
   const loadSquad = useMatchStore((state) => state.loadSquad);
   const matchHydrated = useMatchStore((state) => state.hydrated);
   const matchId = useMatchStore((state) => state.matchId);
+  const ourScore = useMatchStore((state) => state.ourScore);
+  const theirScore = useMatchStore((state) => state.theirScore);
+  const addGoal = useMatchStore((state) => state.addGoal);
   const clubPlayers = useClubStore((state) => state.players);
   const { team } = useCoachTeam();
   const [selectedOff, setSelectedOff] = useState<string | null>(null);
@@ -290,6 +293,11 @@ export function LiveMatchTracker() {
         <p className="my-4 text-center font-mono text-5xl tracking-wider text-emerald-400">
           {formatClock(matchTimeSeconds)}
         </p>
+        <div className="mb-3 flex items-center justify-center gap-3" aria-label="Score">
+          <ScoreControl label={teamName} value={ourScore} onChange={(delta) => addGoal("for", delta)} />
+          <span className="text-2xl font-black">–</span>
+          <ScoreControl label={opponent.trim() || "Opposition"} value={theirScore} onChange={(delta) => addGoal("against", delta)} />
+        </div>
         <label className="mb-3 block text-sm font-semibold text-emerald-100">
           Opponent
           <input
@@ -344,6 +352,25 @@ export function LiveMatchTracker() {
                   minutesPlayed: player.minutesPlayed,
                 })),
                 matchId,
+                (() => {
+                  const live = useMatchStore.getState();
+                  return {
+                    formation: customFormations.find((item) => item.id === formation)?.name ?? formation,
+                    durationSeconds: live.matchTimeSeconds,
+                    ourScore: live.ourScore,
+                    theirScore: live.theirScore,
+                    events: live.events,
+                    layout,
+                    teamLabel: team.name,
+                    players: live.players.map((player) => ({
+                      playerId: player.playerId,
+                      name: player.name,
+                      squadNumber: player.squadNumber,
+                      position: player.position,
+                      startedOnPitch: player.startedOnPitch,
+                    })),
+                  };
+                })(),
               );
               setSaved(true);
             }}
@@ -420,5 +447,24 @@ function PlayerColumn({
         })}
       </ul>
     </section>
+  );
+}
+
+function ScoreControl({ label, value, onChange }: { label: string; value: number; onChange: (delta: 1 | -1) => void }) {
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <span className="max-w-28 truncate text-xs font-semibold text-slate-300">{label}</span>
+      <div className="flex items-center gap-1">
+        <button type="button" aria-label={`${label} goal removed`} onClick={() => onChange(-1)} className="btn-quiet size-11 rounded-md text-lg font-bold">
+          −
+        </button>
+        <span className="w-10 text-center font-mono text-3xl font-bold tabular-nums" data-score>
+          {value}
+        </span>
+        <button type="button" aria-label={`${label} goal`} onClick={() => onChange(1)} className="btn-shade size-11 rounded-md text-lg font-bold">
+          +
+        </button>
+      </div>
+    </div>
   );
 }

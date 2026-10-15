@@ -17,6 +17,7 @@ import {
   type ClubData,
   type ClubDrill,
   type EvaluationRecord,
+  type MatchExtra,
   type SavedMatch,
   type SessionPlan,
   type TrainingStatus,
@@ -92,6 +93,7 @@ interface ClubState extends ClubData {
     opponent: string,
     minutes: { playerId: string; minutesPlayed: number }[],
     matchId?: string,
+    extra?: MatchExtra,
   ) => void;
   saveCustomFormation: (name: string, slots: { x: number; y: number }[]) => string;
   setDrillBoard: (drillId: string, board: DrillBoard) => void;
@@ -433,12 +435,12 @@ export const useClubStore = create<ClubState>()(
             ...state.sessions,
           ],
         })),
-      saveMatch: (teamId, opponent, minutes, matchId) =>
+      saveMatch: (teamId, opponent, minutes, matchId, extra) =>
         set((state) => {
           const id = matchId || `match-${Date.now()}`;
           const previous = state.matches.find((item) => item.id === id);
           const playedOn = previous?.playedOn ?? todayLabel();
-          const match: SavedMatch = { id, teamId, opponent, playedOn, minutes };
+          const match: SavedMatch = { ...extra, id, teamId, opponent, playedOn, minutes, updatedAt: new Date().toISOString() };
           const prefix = `att-${id}-`;
           const attendance: AttendanceRecord[] = minutes.map((row) => ({
             id: `${prefix}${row.playerId}`,

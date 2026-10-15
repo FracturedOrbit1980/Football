@@ -77,7 +77,28 @@ export interface SavedMatch {
   opponent: string;
   playedOn: string;
   minutes: { playerId: string; minutesPlayed: number }[];
+  /** Added for sync. Older saved matches lack these. */
+  formation?: string;
+  durationSeconds?: number;
+  ourScore?: number;
+  theirScore?: number;
+  players?: { playerId: string; name: string; squadNumber: number; position: string; startedOnPitch: boolean }[];
+  /** Substitutions in match-clock milliseconds (the rotation log). */
+  events?: MatchEvent[];
+  layout?: { playerId: string; x: number; y: number }[] | null;
+  teamLabel?: string;
+  /** ISO time of the last local edit; drives last-write-wins sync. */
+  updatedAt?: string;
 }
+
+export interface MatchEvent {
+  kind: "SUB" | "GOAL_FOR" | "GOAL_AGAINST";
+  atMs: number;
+  offId?: string;
+  onId?: string;
+}
+
+export type MatchExtra = Omit<SavedMatch, "id" | "teamId" | "opponent" | "playedOn" | "minutes" | "updatedAt">;
 
 export interface CustomFormation {
   id: string;
