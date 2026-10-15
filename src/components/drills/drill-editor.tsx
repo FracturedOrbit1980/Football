@@ -57,6 +57,7 @@ import {
   type PitchView,
 } from "@/lib/club/board";
 import { useClubStore } from "@/stores/club-store";
+import { PitchWatermark } from "@/components/cloud/branding";
 
 const SPEEDS = [0.5, 1, 2];
 
@@ -657,6 +658,7 @@ function DrillEditorForm({ requestedId }: { requestedId: string | null }) {
         </ToolButton>
       </div>
       <div className="editor-pitch min-w-0">
+        <div className="relative">
         <svg
           ref={svgRef}
           data-pitch="editor"
@@ -719,6 +721,8 @@ function DrillEditorForm({ requestedId }: { requestedId: string | null }) {
             </g>
           ))}
         </svg>
+          <PitchWatermark />
+        </div>
         <div className="editor-frame-bar mt-3 rounded-xl bg-white px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-600 ring-1 ring-slate-300" data-frame-bar>
           <div className="flex items-center justify-between gap-2">
             <p>
