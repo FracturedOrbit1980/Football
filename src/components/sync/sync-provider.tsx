@@ -3,10 +3,10 @@
 import { useEffect, type ReactNode } from "react";
 
 import { useCloudSession } from "@/components/cloud/cloud-session";
-import { loadTeamScope } from "@/lib/sync/team-scope";
+import { importClubSquads, loadTeamScope } from "@/lib/sync/team-scope";
 import { queueEverything, readSettings, syncNow, useSyncState, watchClubStore } from "@/lib/sync/engine";
 import { useClubLibrary } from "@/stores/club-library";
-import { useClubStore } from "@/stores/club-store";
+import { loadClubData, useClubStore } from "@/stores/club-store";
 
 /** Runs background sync for staff in club mode. Demo mode never syncs. */
 export function SyncProvider({ children }: { children: ReactNode }) {
@@ -26,7 +26,10 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     if (!library.ready) library.refresh();
     const current = useClubLibrary.getState();
     if (current.activeId !== `cloud-${clubId}` || !useClubStore.getState().hydrated)
-      void current.openCloudWorkspace(clubId, clubName);
+      void current.openCloudWorkspace(clubId, clubName).then(() => {
+        // Club routes do not mount the coach tools' provider, so load the workspace here.
+        if (!useClubStore.getState().hydrated) return loadClubData(`cloud-${clubId}`, "custom");
+      });
   }, [clubId, clubName]);
 
   useEffect(() => {
@@ -37,6 +40,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     if (!clubId || !hydrated || !userId) return;
     const stop = watchClubStore(clubId);
     void loadTeamScope(clubId, userId, isAdmin)
+      .then(() => importClubSquads())
       .then(() => queueEverything(clubId))
       .then(() => syncNow());
     const kick = () => {
