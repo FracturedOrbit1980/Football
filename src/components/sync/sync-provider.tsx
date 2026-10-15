@@ -1,0 +1,40 @@
+"use client";
+
+import { useEffect, type ReactNode } from "react";
+
+import { useCloudSession } from "@/components/cloud/cloud-session";
+import { queueEverything, readSettings, syncNow, useSyncState, watchClubStore } from "@/lib/sync/engine";
+import { useClubStore } from "@/stores/club-store";
+
+/** Runs background sync for staff in club mode. Demo mode never syncs. */
+export function SyncProvider({ children }: { children: ReactNode }) {
+  const cloud = useCloudSession();
+  const staff = cloud.hasRole("CLUB_ADMIN", "COACH", "TEAM_MANAGER", "FITNESS");
+  const clubId = cloud.enabled && cloud.session && staff ? cloud.activeClubId : null;
+  const hydrated = useClubStore((state) => state.hydrated);
+
+  useEffect(() => {
+    useSyncState.setState({ settings: readSettings(), clubId, status: clubId ? "idle" : "local" });
+  }, [clubId]);
+
+  useEffect(() => {
+    if (!clubId || !hydrated) return;
+    const stop = watchClubStore(clubId);
+    void queueEverything(clubId).then(() => syncNow());
+    const kick = () => void syncNow();
+    window.addEventListener("online", kick);
+    window.addEventListener("offline", kick);
+    const connection = (navigator as Navigator & { connection?: EventTarget }).connection;
+    connection?.addEventListener?.("change", kick);
+    const timer = setInterval(kick, 120_000);
+    return () => {
+      stop();
+      window.removeEventListener("online", kick);
+      window.removeEventListener("offline", kick);
+      connection?.removeEventListener?.("change", kick);
+      clearInterval(timer);
+    };
+  }, [clubId, hydrated]);
+
+  return children;
+}

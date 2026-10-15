@@ -3,8 +3,11 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 
 import { RoleProvider } from "@/components/auth/role-session";
+import { BrandingProvider } from "@/components/cloud/branding";
+import { CloudSessionProvider } from "@/components/cloud/cloud-session";
 import { ClubProvider } from "@/components/club/club-provider";
 import { ClubTheme } from "@/components/club/club-theme";
+import { SyncProvider } from "@/components/sync/sync-provider";
 import { appearanceScript } from "@/components/layout/appearance";
 import { AppShell } from "@/components/layout/app-shell";
 import { InstallServiceWorker } from "@/components/layout/install-service-worker";
@@ -61,12 +64,18 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           {appearanceScript}
         </Script>
         <InstallServiceWorker />
-        <RoleProvider>
-          <ClubTheme />
-          <AppShell>
-            <ClubProvider>{children}</ClubProvider>
-          </AppShell>
-        </RoleProvider>
+        <CloudSessionProvider>
+          <RoleProvider>
+            <BrandingProvider>
+              <ClubTheme />
+              <AppShell>
+                <ClubProvider>
+                  <SyncProvider>{children}</SyncProvider>
+                </ClubProvider>
+              </AppShell>
+            </BrandingProvider>
+          </RoleProvider>
+        </CloudSessionProvider>
       </body>
     </html>
   );

@@ -17,7 +17,7 @@ import { TeamPicker, useCoachTeam } from "@/components/coach/team-picker";
 import { DEFAULT_PITCH_COLOR } from "@/lib/club/board";
 import { formatPosition, playsInGoal } from "@/lib/club/positions";
 import { useClubStore } from "@/stores/club-store";
-import { useMatchStore, type PlayerMatchState } from "@/stores/match-store";
+import { hydrateMatchStore, useMatchStore, type PlayerMatchState } from "@/stores/match-store";
 
 function formatClock(totalSeconds: number) {
   const mins = Math.floor(totalSeconds / 60);
@@ -40,6 +40,11 @@ export function LiveMatchTracker() {
   const setMatchPitchColor = useClubStore((state) => state.setMatchPitchColor);
   const saveCustomFormation = useClubStore((state) => state.saveCustomFormation);
   const loadSquad = useMatchStore((state) => state.loadSquad);
+  const matchHydrated = useMatchStore((state) => state.hydrated);
+  const matchId = useMatchStore((state) => state.matchId);
+  const ourScore = useMatchStore((state) => state.ourScore);
+  const theirScore = useMatchStore((state) => state.theirScore);
+  const addGoal = useMatchStore((state) => state.addGoal);
   const clubPlayers = useClubStore((state) => state.players);
   const { team } = useCoachTeam();
   const [selectedOff, setSelectedOff] = useState<string | null>(null);
@@ -60,7 +65,13 @@ export function LiveMatchTracker() {
   const teamName = team?.name ?? "Squad";
 
   useEffect(() => {
-    if (!teamId || isClockRunning || matchTimeSeconds > 0) return;
+    void hydrateMatchStore();
+  }, []);
+
+  useEffect(() => {
+    if (!matchHydrated || !teamId) return;
+    const live = useMatchStore.getState();
+    if (live.isClockRunning || live.bankedMs > 0) return;
     const squad = clubPlayers
       .filter((player) => player.teamId === teamId)
       .sort((a, b) => a.squadNumber - b.squadNumber)
@@ -76,12 +87,22 @@ export function LiveMatchTracker() {
     const next = squad.map((player) => `${player.playerId}:${player.position}`).join("|");
     if (current === next) return;
     loadSquad(squad);
-  }, [clubPlayers, isClockRunning, loadSquad, matchTimeSeconds, squadKey, teamId]);
+  }, [clubPlayers, isClockRunning, loadSquad, matchHydrated, matchTimeSeconds, squadKey, teamId]);
 
+  // The clock is derived from timestamps; this interval only refreshes the display,
+  // so throttled or suspended timers (locked phone, background tab) lose no time.
   useEffect(() => {
     if (!isClockRunning) return;
-    const interval = setInterval(() => tickSecond(), 1000);
-    return () => clearInterval(interval);
+    tickSecond();
+    const interval = setInterval(() => tickSecond(), 500);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") tickSecond();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [isClockRunning, tickSecond]);
 
   const onPitch = players.filter((player) => player.isOnPitch);
@@ -272,6 +293,11 @@ export function LiveMatchTracker() {
         <p className="my-4 text-center font-mono text-5xl tracking-wider text-emerald-400">
           {formatClock(matchTimeSeconds)}
         </p>
+        <div className="mb-3 flex items-center justify-center gap-3" aria-label="Score">
+          <ScoreControl label={teamName} value={ourScore} onChange={(delta) => addGoal("for", delta)} />
+          <span className="text-2xl font-black">–</span>
+          <ScoreControl label={opponent.trim() || "Opposition"} value={theirScore} onChange={(delta) => addGoal("against", delta)} />
+        </div>
         <label className="mb-3 block text-sm font-semibold text-emerald-100">
           Opponent
           <input
@@ -301,6 +327,7 @@ export function LiveMatchTracker() {
             className="h-14 min-w-36 text-base"
             onClick={() => {
               resetMatch();
+              setSaved(false);
               setSelectedOff(null);
               setSelectedOn(null);
             }}
@@ -316,13 +343,34 @@ export function LiveMatchTracker() {
             disabled={players.length === 0 || opponent.trim().length === 0}
             onClick={() => {
               if (!team) return;
+              useMatchStore.getState().tickSecond();
               saveMatch(
                 team.id,
                 opponent.trim(),
-                players.map((player) => ({
+                useMatchStore.getState().players.map((player) => ({
                   playerId: player.playerId,
                   minutesPlayed: player.minutesPlayed,
                 })),
+                matchId,
+                (() => {
+                  const live = useMatchStore.getState();
+                  return {
+                    formation: customFormations.find((item) => item.id === formation)?.name ?? formation,
+                    durationSeconds: live.matchTimeSeconds,
+                    ourScore: live.ourScore,
+                    theirScore: live.theirScore,
+                    events: live.events,
+                    layout,
+                    teamLabel: team.name,
+                    players: live.players.map((player) => ({
+                      playerId: player.playerId,
+                      name: player.name,
+                      squadNumber: player.squadNumber,
+                      position: player.position,
+                      startedOnPitch: player.startedOnPitch,
+                    })),
+                  };
+                })(),
               );
               setSaved(true);
             }}
@@ -332,7 +380,7 @@ export function LiveMatchTracker() {
         </div>
         <p className="mt-3 text-center text-sm font-medium text-slate-300">
           {emptyMessage ? `${emptyMessage} ` : null}
-          {saved ? "Minutes saved. Players with time on the pitch are marked present." : null}{" "}
+          {saved ? "Minutes saved. Saving again updates this match. Players with time on the pitch are marked present." : null}{" "}
           Tap a player on the pitch, then a bench player, to substitute. Minutes accrue only while the clock runs.
         </p>
       </section>
@@ -399,5 +447,24 @@ function PlayerColumn({
         })}
       </ul>
     </section>
+  );
+}
+
+function ScoreControl({ label, value, onChange }: { label: string; value: number; onChange: (delta: 1 | -1) => void }) {
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <span className="max-w-28 truncate text-xs font-semibold text-slate-300">{label}</span>
+      <div className="flex items-center gap-1">
+        <button type="button" aria-label={`${label} goal removed`} onClick={() => onChange(-1)} className="btn-quiet size-11 rounded-md text-lg font-bold">
+          −
+        </button>
+        <span className="w-10 text-center font-mono text-3xl font-bold tabular-nums" data-score>
+          {value}
+        </span>
+        <button type="button" aria-label={`${label} goal`} onClick={() => onChange(1)} className="btn-shade size-11 rounded-md text-lg font-bold">
+          +
+        </button>
+      </div>
+    </div>
   );
 }

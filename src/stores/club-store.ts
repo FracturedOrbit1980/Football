@@ -7,7 +7,7 @@ import { canonicalDivision, canonicalTeamName, type Division, type DrillLevel, t
 import { isDrillLevel, isDrillType, isMoment, skillOf, withUefaDrills, youthAgeOf } from "@/lib/club/drill-record";
 import { DEFAULT_PITCH_COLOR, type DrillBoard } from "@/lib/club/board";
 import { mergeLibraryBoards } from "@/lib/club/library-boards";
-import { placeOnU12Prem, playerId, SQUAD_TEAM_ID, type RosterRow } from "@/lib/club/roster";
+import { isRetiredSeedPlayer, playerId, type RosterRow } from "@/lib/club/roster";
 import { weekDates } from "@/lib/club/week";
 import { clubDataKey } from "@/lib/club/registry";
 import {
@@ -17,6 +17,7 @@ import {
   type ClubData,
   type ClubDrill,
   type EvaluationRecord,
+  type MatchExtra,
   type SavedMatch,
   type SessionPlan,
   type TrainingStatus,
@@ -87,7 +88,13 @@ interface ClubState extends ClubData {
   setTrainingAttendance: (playerId: string, date: string, present: boolean) => void;
   saveWeeklyReport: (playerId: string, teamId: string, weekStart: string, gameFeedback: string) => void;
   saveSession: (teamId: string, title: string, drillIds: string[]) => void;
-  saveMatch: (teamId: string, opponent: string, minutes: { playerId: string; minutesPlayed: number }[]) => void;
+  saveMatch: (
+    teamId: string,
+    opponent: string,
+    minutes: { playerId: string; minutesPlayed: number }[],
+    matchId?: string,
+    extra?: MatchExtra,
+  ) => void;
   saveCustomFormation: (name: string, slots: { x: number; y: number }[]) => string;
   setDrillBoard: (drillId: string, board: DrillBoard) => void;
   setMatchPitchColor: (color: string) => void;
@@ -208,37 +215,41 @@ export const useClubStore = create<ClubState>()(
         })),
       importPlayers: (rows) => {
         const state = get();
-        const placed = placeOnU12Prem(ensureYouthAges(state.ageGroups), state.players);
-        const players = [...placed.players];
+        const teamId = state.coachTeamId;
+        if (!teamId || !state.ageGroups.some((group) => group.teams.some((team) => team.id === teamId))) {
+          return { added: 0, updated: 0 };
+        }
+        const players = [...state.players];
         let added = 0;
         let updated = 0;
         for (const row of rows) {
           const name = row.name.trim().replace(/\s+/g, " ");
-          const index = players.findIndex((player) => player.name.trim().toLowerCase() === name.toLowerCase());
+          const index = players.findIndex(
+            (player) => player.teamId === teamId && player.name.trim().toLowerCase() === name.toLowerCase(),
+          );
           if (index >= 0) {
             players[index] = {
               ...players[index],
               name,
               squadNumber: row.squadNumber,
-              teamId: placed.teamId,
             };
             updated += 1;
           } else {
             const id = playerId(name);
             players.push({
-              id: players.some((player) => player.id === id) ? `${id}-${placed.teamId}` : id,
+              id: players.some((player) => player.id === id) ? `${id}-${teamId}-${Date.now()}-${added}` : id,
               name,
               squadNumber: row.squadNumber,
               position: "Central midfielder",
               positions: [],
-              teamId: placed.teamId,
+              teamId,
               homework: "",
               photo: "",
             });
             added += 1;
           }
         }
-        set({ ageGroups: placed.ageGroups, players, coachTeamId: placed.teamId });
+        set({ players });
         return { added, updated };
       },
       updatePlayer: (playerId, input) =>
@@ -424,26 +435,24 @@ export const useClubStore = create<ClubState>()(
             ...state.sessions,
           ],
         })),
-      saveMatch: (teamId, opponent, minutes) =>
+      saveMatch: (teamId, opponent, minutes, matchId, extra) =>
         set((state) => {
-          const playedOn = todayLabel();
-          const match: SavedMatch = {
-            id: `match-${Date.now()}`,
-            teamId,
-            opponent,
-            playedOn,
-            minutes,
-          };
+          const id = matchId || `match-${Date.now()}`;
+          const previous = state.matches.find((item) => item.id === id);
+          const playedOn = previous?.playedOn ?? todayLabel();
+          const match: SavedMatch = { ...extra, id, teamId, opponent, playedOn, minutes, updatedAt: new Date().toISOString() };
+          const prefix = `att-${id}-`;
           const attendance: AttendanceRecord[] = minutes.map((row) => ({
-            id: `att-${match.id}-${row.playerId}`,
+            id: `${prefix}${row.playerId}`,
             playerId: row.playerId,
             when: playedOn,
             detail: `vs ${opponent}`,
             status: row.minutesPlayed > 0 ? "Present" : "Absent",
           }));
+          // Saving the same match again replaces its record and attendance instead of adding duplicates.
           return {
-            matches: [match, ...state.matches],
-            attendance: [...attendance, ...state.attendance],
+            matches: [match, ...state.matches.filter((item) => item.id !== id)],
+            attendance: [...attendance, ...state.attendance.filter((item) => !item.id.startsWith(prefix))],
           };
         }),
       saveCustomFormation: (name, slots) => {
@@ -545,7 +554,6 @@ export const useClubStore = create<ClubState>()(
         const kind = saved.clubKind === "custom" ? "custom" : "bnfc";
         const baseline = kind === "custom" ? createEmptyClub() : createSeed();
         const savedPlayers = saved.players ?? [];
-        const useSquad = kind === "bnfc" && savedPlayers.length === 0;
         const ageGroups = ensureYouthAges(saved.ageGroups ?? baseline.ageGroups).map((group) => ({
           ...group,
           teams: (group.teams ?? []).map((team) => ({
@@ -554,42 +562,45 @@ export const useClubStore = create<ClubState>()(
             division: canonicalDivision(team.division) ?? canonicalDivision(team.name),
           })),
         }));
-        const players = (useSquad ? baseline.players : savedPlayers).map((player) => {
-          const next = { ...player } as typeof player & { dateOfBirth?: string };
-          delete next.dateOfBirth;
-          return {
-            ...next,
-            ...normalizePositions(player.position, player.positions),
-            photo: typeof player.photo === "string" ? player.photo : "",
-          };
-        });
-        const placed = placeOnU12Prem(ageGroups, players);
+        // Drop players left over from the retired built-in demo squad, plus their records.
+        const retired = new Set(
+          savedPlayers.filter((player) => isRetiredSeedPlayer(player)).map((player) => player.id),
+        );
+        const players = savedPlayers
+          .filter((player) => !retired.has(player.id))
+          .map((player) => {
+            const next = { ...player } as typeof player & { dateOfBirth?: string };
+            delete next.dateOfBirth;
+            return {
+              ...next,
+              ...normalizePositions(player.position, player.positions),
+              photo: typeof player.photo === "string" ? player.photo : "",
+            };
+          });
+        const keep = <T extends { playerId: string }>(rows: T[] | undefined) =>
+          (rows ?? []).filter((row) => !retired.has(row.playerId));
+        const matches = (saved.matches ?? []).map((match) => ({ ...match, minutes: keep(match.minutes) }));
+        const teamExists = (id: string | null) =>
+          !!id && ageGroups.some((group) => group.teams.some((team) => team.id === id));
         const previousTeam = saved.coachTeamId ?? null;
-        const previousGroup = placed.ageGroups.find((group) => group.teams.some((team) => team.id === previousTeam));
-        const openPrem =
-          kind === "bnfc" &&
-          (!previousTeam ||
-            previousTeam === SQUAD_TEAM_ID ||
-            previousTeam === placed.teamId ||
-            (previousGroup ? ageNumber(previousGroup.name) === 12 : true));
         const drills = withUefaDrills(saved.drills, baseline.drills);
         return {
           ...current,
           ...saved,
           clubKind: kind,
           customFormations: saved.customFormations ?? [],
-          ageGroups: kind === "custom" ? ageGroups : placed.ageGroups,
-          players: kind === "custom" ? players : placed.players,
+          ageGroups,
+          players,
           drills,
-          coachTeamId: kind === "custom" ? previousTeam : openPrem ? placed.teamId : previousTeam,
+          coachTeamId: teamExists(previousTeam) ? previousTeam : null,
           boards: mergeLibraryBoards(saved.boards),
           coaches: saved.coaches ?? [],
-          evaluations: saved.evaluations ?? [],
-          attendance: saved.attendance ?? [],
-          trainingMarks: saved.trainingMarks ?? [],
-          weeklyReports: saved.weeklyReports ?? [],
+          evaluations: keep(saved.evaluations),
+          attendance: keep(saved.attendance),
+          trainingMarks: keep(saved.trainingMarks),
+          weeklyReports: keep(saved.weeklyReports),
           sessions: saved.sessions ?? [],
-          matches: saved.matches ?? [],
+          matches,
           matchPitchColor: saved.matchPitchColor || DEFAULT_PITCH_COLOR,
           hydrated: false,
         };

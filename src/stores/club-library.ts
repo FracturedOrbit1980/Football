@@ -14,6 +14,8 @@ interface LibraryState {
   load: (id: string) => Promise<void>;
   addClub: (input: { name: string; logo: string; theme: ClubThemeId }) => Promise<void>;
   updateClub: (id: string, input: { name: string; logo: string; theme: ClubThemeId }) => void;
+  /** Club mode: a separate on-device workspace per cloud club, so clubs never share local data. */
+  openCloudWorkspace: (cloudClubId: string, name: string) => Promise<void>;
 }
 
 function save(clubs: ClubProfile[], activeId: string | null) {
@@ -53,6 +55,15 @@ export const useClubLibrary = create<LibraryState>((set, get) => ({
     useClubStore.setState({ hydrated: false });
     save(clubs, club.id);
     set({ clubs, activeId: club.id });
+  },
+  openCloudWorkspace: async (cloudClubId, name) => {
+    const id = `cloud-${cloudClubId}`;
+    if (!get().clubs.some((club) => club.id === id)) {
+      const clubs = [...get().clubs, { id, name: name || "Club", logo: "", theme: "red" as ClubThemeId, kind: "custom" as const }];
+      save(clubs, get().activeId);
+      set({ clubs });
+    }
+    await get().load(id);
   },
   updateClub: (id, input) => {
     const name = input.name.trim();

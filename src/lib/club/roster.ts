@@ -1,26 +1,10 @@
-import { ageNumber } from "@/lib/club/age";
-
+/** Team id used by the old built-in demo squad. Kept so older saved data still resolves. */
 export const SQUAD_TEAM_ID = "tm-u12-2015";
 
 export interface RosterRow {
   name: string;
   squadNumber: number;
 }
-
-export const U12_SQUAD: RosterRow[] = [
-  { name: "HUDSON ANTHONY MINNIE", squadNumber: 4 },
-  { name: "LUNGELO MNQOBI MLUNGWANE", squadNumber: 12 },
-  { name: "KAYDEN METZER", squadNumber: 41 },
-  { name: "FABIO DE ABREU", squadNumber: 17 },
-  { name: "JOSHUA JORDAN HELENA", squadNumber: 8 },
-  { name: "DIEGO FERDINAND MASSYN", squadNumber: 9 },
-  { name: "MPHO QUINTON MALATJI", squadNumber: 11 },
-  { name: "RILEY MACKINLAY", squadNumber: 33 },
-  { name: "CARTER SEVIRON DORMEHL", squadNumber: 1 },
-  { name: "NOAH LEE EL SAMRANI", squadNumber: 7 },
-  { name: "ETHAN DELPORT", squadNumber: 10 },
-  { name: "MASUNGULO TLAKA", squadNumber: 5 },
-];
 
 export function playerId(name: string) {
   const slug = name
@@ -31,42 +15,28 @@ export function playerId(name: string) {
   return `p-${slug || "player"}`;
 }
 
-type PremTeam = { id: string; name: string; division?: string };
+/**
+ * Fingerprints (FNV-1a of "lowercased name|squad number") of a demo squad that
+ * earlier builds seeded into browser storage. Only hashes are kept so no names
+ * ship in the app. Saved players that still match are removed on load.
+ */
+const RETIRED_SEED_FINGERPRINTS = new Set([
+  "6f3cb595", "9e8bc23a", "06d699b1", "2ac78004", "d7f42854", "a180cee6",
+  "64f05575", "889e3f5d", "c604f95c", "e0a3a75c", "867308b6", "64e3ed42",
+]);
 
-export function placeOnU12Prem<G extends { name: string; teams: PremTeam[] }, P extends { name: string; teamId: string }>(
-  groups: G[],
-  players: P[],
-): { ageGroups: G[]; players: P[]; teamId: string } {
-  const squadNames = new Set(U12_SQUAD.map((player) => player.name.trim().toLowerCase()));
-  const u12 = groups.find((group) => ageNumber(group.name) === 12);
-  const prem = u12?.teams.find((team) => team.division === "Prem" || team.name === "Prem");
-  const squad = u12?.teams.find((team) => team.id === SQUAD_TEAM_ID);
-  const teamId = prem?.id ?? squad?.id ?? SQUAD_TEAM_ID;
-  const ageGroups = groups.map((group) => {
-    if (ageNumber(group.name) !== 12) return group;
-    const teams = group.teams
-      .filter((team) => team.id === teamId || (team.id !== SQUAD_TEAM_ID && team.division && team.division !== "Prem"))
-      .map((team) => (team.id === teamId ? { ...team, name: "Prem", division: "Prem" } : team));
-    if (!teams.some((team) => team.id === teamId)) {
-      teams.unshift({ id: teamId, name: "Prem", division: "Prem" });
-    }
-    return { ...group, teams };
-  });
-  const ordered = [...players].sort((left, right) => Number(right.teamId === teamId) - Number(left.teamId === teamId));
-  const seen = new Set<string>();
-  const nextPlayers: P[] = [];
-  for (const player of ordered) {
-    const key = player.name.trim().toLowerCase();
-    const belongs = squadNames.has(key) || player.teamId === SQUAD_TEAM_ID || player.teamId === teamId;
-    if (!belongs) {
-      nextPlayers.push(player);
-      continue;
-    }
-    if (seen.has(key)) continue;
-    seen.add(key);
-    nextPlayers.push({ ...player, teamId });
+function fingerprint(value: string) {
+  let hash = 0x811c9dc5;
+  for (const char of value) {
+    hash ^= char.charCodeAt(0);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
   }
-  return { ageGroups, players: nextPlayers, teamId };
+  return hash.toString(16).padStart(8, "0");
+}
+
+export function isRetiredSeedPlayer(player: { name: string; squadNumber: number }) {
+  const key = `${player.name.trim().toLowerCase().replace(/\s+/g, " ")}|${player.squadNumber}`;
+  return RETIRED_SEED_FINGERPRINTS.has(fingerprint(key));
 }
 
 export function parseRoster(text: string): { rows: RosterRow[]; errors: string[] } {
