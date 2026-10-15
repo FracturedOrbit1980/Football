@@ -47,17 +47,35 @@ export function CloudSessionProvider({ children }: { children: ReactNode }) {
       return;
     }
     setLoading(true);
-    await cloud.rpc("claim_my_invites");
-    const [members, platform] = await Promise.all([
-      cloud
-        .from("club_members")
-        .select("club_id, role, clubs(id, name, player_code_prefix)")
-        .eq("user_id", current.user.id),
-      cloud.from("platform_admins").select("user_id").eq("user_id", current.user.id),
-    ]);
-    const rows = ((members.data ?? []) as unknown as Membership[]).filter((row) => row.clubs);
+    // Offline (or the network fails), fall back to the memberships cached on this device
+    // so the coach can still open the live match screen. RLS remains the real boundary.
+    const cacheKey = `bnfc-memberships-${current.user.id}`;
+    let rows: Membership[] = [];
+    let platformAdmin = false;
+    try {
+      await cloud.rpc("claim_my_invites");
+      const [members, platform] = await Promise.all([
+        cloud
+          .from("club_members")
+          .select("club_id, role, clubs(id, name, player_code_prefix)")
+          .eq("user_id", current.user.id),
+        cloud.from("platform_admins").select("user_id").eq("user_id", current.user.id),
+      ]);
+      if (members.error || platform.error) throw members.error ?? platform.error;
+      rows = ((members.data ?? []) as unknown as Membership[]).filter((row) => row.clubs);
+      platformAdmin = (platform.data ?? []).length > 0;
+      localStorage.setItem(cacheKey, JSON.stringify({ rows, platformAdmin }));
+    } catch {
+      try {
+        const cached = JSON.parse(localStorage.getItem(cacheKey) ?? "null") as { rows: Membership[]; platformAdmin: boolean } | null;
+        rows = cached?.rows ?? [];
+        platformAdmin = cached?.platformAdmin ?? false;
+      } catch {
+        rows = [];
+      }
+    }
     setMemberships(rows);
-    setPlatformAdmin((platform.data ?? []).length > 0);
+    setPlatformAdmin(platformAdmin);
     const stored = localStorage.getItem(ACTIVE_CLUB_KEY);
     const ids = Array.from(new Set(rows.map((row) => row.club_id)));
     setActiveClubId(stored && ids.includes(stored) ? stored : (ids[0] ?? null));
@@ -108,6 +126,7 @@ export function CloudSessionProvider({ children }: { children: ReactNode }) {
       refresh: () => load(session),
       signOut: async () => {
         localStorage.removeItem(ACTIVE_CLUB_KEY);
+        if (session) localStorage.removeItem(`bnfc-memberships-${session.user.id}`);
         await clearDeviceData();
         await getCloud()?.auth.signOut();
       },
