@@ -21,6 +21,7 @@ import { useRole } from "@/components/auth/role-session";
 import { AppBackdrop, SponsorStrip, useBranding } from "@/components/cloud/branding";
 import { useCloudSession } from "@/components/cloud/cloud-session";
 import { DemoBanner } from "@/components/cloud/cloud-ui";
+import { SyncIndicator } from "@/components/sync/sync-settings";
 import type { ClubRole } from "@/lib/cloud/types";
 import { AppearanceToggle } from "@/components/layout/appearance";
 import { SignOutButton } from "@/components/layout/sign-out-button";
@@ -147,6 +148,12 @@ export function AppShell({ children }: { children: ReactNode }) {
           <DemoBanner />
           <SponsorStrip />
           {children}
+          <footer className="mt-12 flex flex-wrap gap-4 border-t border-slate-300 pt-4 text-sm font-semibold text-slate-600">
+            <Link href="/privacy" className="underline">
+              Privacy and POPIA notice
+            </Link>
+            <SyncIndicator />
+          </footer>
         </div>
       </main>
 

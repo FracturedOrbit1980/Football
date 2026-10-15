@@ -5,6 +5,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 
 import { getCloud, isCloudMode } from "@/lib/cloud/client";
 import type { Club, ClubRole, Membership } from "@/lib/cloud/types";
+import { clearDeviceData } from "@/lib/sync/engine";
 
 const ACTIVE_CLUB_KEY = "football-active-club";
 
@@ -107,6 +108,7 @@ export function CloudSessionProvider({ children }: { children: ReactNode }) {
       refresh: () => load(session),
       signOut: async () => {
         localStorage.removeItem(ACTIVE_CLUB_KEY);
+        await clearDeviceData();
         await getCloud()?.auth.signOut();
       },
     };

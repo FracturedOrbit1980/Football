@@ -3,7 +3,9 @@
 import Link from "next/link";
 
 import { useCloudSession } from "@/components/cloud/cloud-session";
+import { ClubPrivacyAdmin } from "@/components/cloud/club-privacy-admin";
 import { CloudGate, Panel, Select } from "@/components/cloud/cloud-ui";
+import { SyncSettings } from "@/components/sync/sync-settings";
 import { CLUB_ROLE_LABEL, type ClubRole } from "@/lib/cloud/types";
 
 const LINKS: { href: string; label: string; roles: ClubRole[] }[] = [
@@ -51,6 +53,16 @@ export function ClubHome() {
             </Link>
           ))}
         </div>
+        {cloud.hasRole("CLUB_ADMIN", "COACH", "TEAM_MANAGER", "FITNESS") ? (
+          <div className="mt-6">
+            <SyncSettings />
+          </div>
+        ) : null}
+        {cloud.hasRole("CLUB_ADMIN") ? (
+          <div className="mt-6">
+            <ClubPrivacyAdmin />
+          </div>
+        ) : null}
       </CloudGate>
     </>
   );
