@@ -87,6 +87,8 @@ export interface SavedMatch {
   events?: MatchEvent[];
   layout?: { playerId: string; x: number; y: number }[] | null;
   teamLabel?: string;
+  /** Club mode: the club's (Supabase) team id this match belongs to. */
+  cloudTeamId?: string;
   /** ISO time of the last local edit; drives last-write-wins sync. */
   updatedAt?: string;
 }

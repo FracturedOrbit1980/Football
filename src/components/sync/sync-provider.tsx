@@ -3,6 +3,7 @@
 import { useEffect, type ReactNode } from "react";
 
 import { useCloudSession } from "@/components/cloud/cloud-session";
+import { loadTeamScope } from "@/lib/sync/team-scope";
 import { queueEverything, readSettings, syncNow, useSyncState, watchClubStore } from "@/lib/sync/engine";
 import { useClubStore } from "@/stores/club-store";
 
@@ -12,16 +13,23 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   const staff = cloud.hasRole("CLUB_ADMIN", "COACH", "TEAM_MANAGER", "FITNESS");
   const clubId = cloud.enabled && cloud.session && staff ? cloud.activeClubId : null;
   const hydrated = useClubStore((state) => state.hydrated);
+  const userId = cloud.session?.user.id ?? null;
+  const isAdmin = cloud.hasRole("CLUB_ADMIN");
 
   useEffect(() => {
     useSyncState.setState({ settings: readSettings(), clubId, status: clubId ? "idle" : "local" });
   }, [clubId]);
 
   useEffect(() => {
-    if (!clubId || !hydrated) return;
+    if (!clubId || !hydrated || !userId) return;
     const stop = watchClubStore(clubId);
-    void queueEverything(clubId).then(() => syncNow());
-    const kick = () => void syncNow();
+    void loadTeamScope(clubId, userId, isAdmin)
+      .then(() => queueEverything(clubId))
+      .then(() => syncNow());
+    const kick = () => {
+      if (navigator.onLine) void loadTeamScope(clubId, userId, isAdmin);
+      void syncNow();
+    };
     window.addEventListener("online", kick);
     window.addEventListener("offline", kick);
     const connection = (navigator as Navigator & { connection?: EventTarget }).connection;
@@ -34,7 +42,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       connection?.removeEventListener?.("change", kick);
       clearInterval(timer);
     };
-  }, [clubId, hydrated]);
+  }, [clubId, hydrated, userId, isAdmin]);
 
   return children;
 }

@@ -95,6 +95,8 @@ interface ClubState extends ClubData {
     matchId?: string,
     extra?: MatchExtra,
   ) => void;
+  /** Club mode: put a saved match on a club team (re-queues it for sync). */
+  assignMatchTeam: (matchId: string, cloudTeamId: string) => void;
   saveCustomFormation: (name: string, slots: { x: number; y: number }[]) => string;
   setDrillBoard: (drillId: string, board: DrillBoard) => void;
   setMatchPitchColor: (color: string) => void;
@@ -434,6 +436,12 @@ export const useClubStore = create<ClubState>()(
             },
             ...state.sessions,
           ],
+        })),
+      assignMatchTeam: (matchId, cloudTeamId) =>
+        set((state) => ({
+          matches: state.matches.map((match) =>
+            match.id === matchId ? { ...match, cloudTeamId, updatedAt: new Date().toISOString() } : match,
+          ),
         })),
       saveMatch: (teamId, opponent, minutes, matchId, extra) =>
         set((state) => {
