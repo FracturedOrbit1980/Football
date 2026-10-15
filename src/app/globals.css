@@ -551,3 +551,28 @@ input[type="file"]::file-selector-button {
   border: 1px solid var(--shade-line);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.28), 0 1px 2px rgb(30 29 27 / 0.12);
 }
+/* Statement run: print only the statements, one per page. */
+.print-area {
+  display: none;
+}
+
+@media print {
+  .print-area {
+    display: block;
+  }
+  body * {
+    visibility: hidden;
+  }
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+  .print-area {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+  }
+  .statement-page {
+    break-after: page;
+  }
+}

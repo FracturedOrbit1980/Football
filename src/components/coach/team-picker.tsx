@@ -21,6 +21,7 @@ export function TeamPicker() {
   const ageGroups = ensureYouthAges(useClubStore((state) => state.ageGroups));
   const coachTeamId = useClubStore((state) => state.coachTeamId);
   const openDivisionTeam = useClubStore((state) => state.openDivisionTeam);
+  const setCoachTeam = useClubStore((state) => state.setCoachTeam);
   const [ageId, setAgeId] = useState("");
   const selected =
     ageGroups.find((group) => group.id === ageId) ??
@@ -80,6 +81,26 @@ export function TeamPicker() {
       ) : (
         <p className="mt-3 text-sm font-medium text-slate-600">Tap an age group, then assign the division.</p>
       )}
+      {selected && selected.teams.some((team) => !team.division) ? (
+        <div className="mt-4" data-named-teams>
+          <p className="text-sm font-semibold text-slate-800">Club teams</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {selected.teams
+              .filter((team) => !team.division)
+              .map((team) => (
+                <button
+                  key={team.id}
+                  type="button"
+                  aria-pressed={team.id === coachTeamId}
+                  onClick={() => setCoachTeam(team.id)}
+                  className={`min-h-11 rounded-xl px-4 text-sm font-black ${team.id === coachTeamId ? "btn-shade" : "btn-quiet"}`}
+                >
+                  {team.name}
+                </button>
+              ))}
+          </div>
+        </div>
+      ) : null}
       {openTeam ? (
         <p data-open-team={openTeam.id} className="mt-3 text-sm font-semibold text-slate-950">
           Open team: {ageLabel(selected?.name ?? "")} · {openTeam.division ?? openTeam.name}

@@ -7,6 +7,7 @@ import { DEFAULT_PITCH_COLOR, DEFAULT_PLAYER_COLOR } from "@/lib/club/board";
 import { playsInGoal } from "@/lib/club/positions";
 import type { CustomFormation } from "@/lib/club/seed";
 import type { PlayerMatchState } from "@/stores/match-store";
+import { PitchWatermark } from "@/components/cloud/branding";
 
 export const FORMATIONS = [
   "2-2",
@@ -173,6 +174,7 @@ export function FormationPitch({
 
   return (
     <div className="flex min-w-0 flex-col">
+      <div className="relative">
       <svg
         ref={svgRef}
         viewBox="0 0 100 64"
@@ -244,6 +246,8 @@ export function FormationPitch({
           </g>
         ))}
       </svg>
+        <PitchWatermark />
+      </div>
       {emptyMessage ? <p className="mt-2 text-sm font-semibold text-slate-800">{emptyMessage}</p> : null}
     </div>
   );
