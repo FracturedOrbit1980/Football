@@ -24,5 +24,5 @@ for (const f of files.filter(keep).sort()) hash.update(f).update(readFileSync(jo
 const version = hash.digest("hex").slice(0, 12);
 
 const template = readFileSync("public/sw.js", "utf8");
-writeFileSync(join(out, "sw.js"), template.replace("__BUILD__", version).replace("__PRECACHE__", JSON.stringify(precache)));
+writeFileSync(join(out, "sw.js"), template.replace("\"__BUILD__\"", JSON.stringify(version)).replace("(__PRECACHE__)", `(${JSON.stringify(precache)})`));
 console.log(`sw.js: ${precache.length} files precached, version ${version}`);

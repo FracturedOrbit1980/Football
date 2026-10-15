@@ -5,6 +5,7 @@ import { useEffect, type ReactNode } from "react";
 import { useCloudSession } from "@/components/cloud/cloud-session";
 import { loadTeamScope } from "@/lib/sync/team-scope";
 import { queueEverything, readSettings, syncNow, useSyncState, watchClubStore } from "@/lib/sync/engine";
+import { useClubLibrary } from "@/stores/club-library";
 import { useClubStore } from "@/stores/club-store";
 
 /** Runs background sync for staff in club mode. Demo mode never syncs. */
@@ -15,6 +16,18 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   const hydrated = useClubStore((state) => state.hydrated);
   const userId = cloud.session?.user.id ?? null;
   const isAdmin = cloud.hasRole("CLUB_ADMIN");
+
+  // Load this club's on-device workspace on every page (including Club home and other
+  // club routes that do not mount the coach tools), so sync runs app-wide.
+  const clubName = cloud.activeClub?.name ?? "";
+  useEffect(() => {
+    if (!clubId) return;
+    const library = useClubLibrary.getState();
+    if (!library.ready) library.refresh();
+    const current = useClubLibrary.getState();
+    if (current.activeId !== `cloud-${clubId}` || !useClubStore.getState().hydrated)
+      void current.openCloudWorkspace(clubId, clubName);
+  }, [clubId, clubName]);
 
   useEffect(() => {
     useSyncState.setState({ settings: readSettings(), clubId, status: clubId ? "idle" : "local" });
