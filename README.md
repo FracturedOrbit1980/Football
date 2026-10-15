@@ -145,3 +145,19 @@ The drill library, editor and live match keep working with no connection.
   - "Sync now".
 - Signing out clears the sync queue and the club's local workspace from the device.
 - Matches are not yet linked to a club team (local team ids are not club team ids), so every coach in the club can see them.
+
+### Matches belong to club teams
+Migration `20261015160000_match_team_scope.sql` scopes `club_matches` to real club teams:
+- Coaches, team managers and fitness staff can read and write only the matches of teams they are assigned to (`team_staff`).
+- Club admins see every match in their club, including **unassigned** ones.
+- Players and guardians can read (but not edit) matches their player took part in (`player_ids`).
+- Other clubs are always denied.
+
+Events, minutes and substitutions live in the match row (`detail`), so the same rules cover them.
+
+On the device, the live match has a "Club team for this match" picker. It maps the local team to a club team and remembers the choice; a club team with the same name is picked automatically. Squad names are matched to club players to fill `player_ids`.
+
+After the upgrade, every match on the device is sent once more so that it gets its team:
+- Matches that can't be placed on one of your teams are **held** on the device (Club home → Sync → "Not synced") until you choose a team. Staff can't upload unassigned matches.
+- Matches already uploaded with no team stay visible to club admins under "Unassigned matches", where admins can assign them. The staff member who uploaded such a match can also still see it and move it onto one of their own teams.
+- If the server refuses a record (for example, you were removed from that team), it is marked **rejected** with the reason instead of blocking the queue. You can pick a team, try again, or keep it on the device only. Network errors are simply retried.

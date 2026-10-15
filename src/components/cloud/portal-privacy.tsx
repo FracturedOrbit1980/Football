@@ -14,7 +14,7 @@ import { PRIVACY_POLICY_VERSION } from "@/lib/privacy";
 type Consent = { id: string; player_id: string | null; kind: string; policy_version: string; given_at: string };
 type DataRequest = { id: string; player_id: string; kind: string; status: string; created_at: string; details: string | null };
 
-const TABLES = ["players", "guardians", "player_ratings", "budget_lines", "kit_allocations", "subs_charges", "consents", "data_requests"] as const;
+const TABLES = ["players", "guardians", "player_ratings", "budget_lines", "kit_allocations", "subs_charges", "consents", "data_requests", "club_matches"] as const;
 
 /** POPIA self-service for players and guardians: notice, export, and requests. */
 export function PortalPrivacy({ players }: { players: Player[] }) {

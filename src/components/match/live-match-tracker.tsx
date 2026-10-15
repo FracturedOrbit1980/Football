@@ -16,6 +16,8 @@ import {
 import { TeamPicker, useCoachTeam } from "@/components/coach/team-picker";
 import { DEFAULT_PITCH_COLOR } from "@/lib/club/board";
 import { formatPosition, playsInGoal } from "@/lib/club/positions";
+import { useSyncState } from "@/lib/sync/engine";
+import { cloudTeamFor, setTeamMapping, useTeamScope } from "@/lib/sync/team-scope";
 import { useClubStore } from "@/stores/club-store";
 import { hydrateMatchStore, useMatchStore, type PlayerMatchState } from "@/stores/match-store";
 
@@ -63,6 +65,11 @@ export function LiveMatchTracker() {
     .map((player) => `${player.id}:${formatPosition(player)}`)
     .join("|");
   const teamName = team?.name ?? "Squad";
+  const syncClubId = useSyncState((state) => state.clubId);
+  const cloudTeams = useTeamScope((state) => state.teams);
+  const scopeAdmin = useTeamScope((state) => state.isAdmin);
+  useTeamScope((state) => state.map);
+  const cloudTeamId = syncClubId && teamId ? cloudTeamFor(teamId, team?.name) : null;
 
   useEffect(() => {
     void hydrateMatchStore();
@@ -187,6 +194,34 @@ export function LiveMatchTracker() {
   return (
     <div className="min-w-0 max-w-full space-y-4 overflow-x-hidden">
       <TeamPicker />
+      {syncClubId && team ? (
+        <div className="mb-6 rounded-2xl bg-white p-4 ring-1 ring-slate-300" data-club-team>
+          <label className="block text-sm font-bold text-slate-900">
+            Club team for this match
+            <select
+              className="mt-1 block h-11 w-full rounded-lg border border-slate-400 bg-white px-3 text-base"
+              value={cloudTeamId ?? ""}
+              onChange={(event) => setTeamMapping(teamId, event.target.value || null)}
+            >
+              <option value="">{scopeAdmin ? "Unassigned (admin only)" : "Choose your team…"}</option>
+              {cloudTeams.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          {!cloudTeamId ? (
+            <p className="mt-2 text-sm font-semibold text-amber-800">
+              {cloudTeams.length === 0
+                ? "You are not assigned to a club team yet, so matches stay on this device. Ask a club admin to add you to a team."
+                : scopeAdmin
+                  ? "Saved matches without a team are flagged as unassigned for admins."
+                  : "Matches stay on this device until you choose one of your club teams."}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
       <div className="match-stage min-w-0">
         <div className="flex min-h-0 min-w-0 flex-col">
           <div className="mb-2 space-y-2" aria-label="Formations">
@@ -362,6 +397,7 @@ export function LiveMatchTracker() {
                     events: live.events,
                     layout,
                     teamLabel: team.name,
+                    cloudTeamId: cloudTeamId ?? undefined,
                     players: live.players.map((player) => ({
                       playerId: player.playerId,
                       name: player.name,
