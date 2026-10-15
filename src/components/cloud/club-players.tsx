@@ -8,6 +8,7 @@ import { must, useClubData } from "@/components/cloud/use-club-data";
 import { Button } from "@/components/ui/button";
 import { errorText, getCloud } from "@/lib/cloud/client";
 import { playerName, type Guardian, type Player, type Team } from "@/lib/cloud/types";
+import { PRIVACY_POLICY_VERSION } from "@/lib/privacy";
 
 type Data = { players: Player[]; guardians: Guardian[]; teams: Team[] };
 
@@ -97,6 +98,7 @@ function PlayersScreen() {
                     p_guardian_phone: form.gPhone,
                     p_guardian_alt_phone: form.gAltPhone || null,
                     p_guardian_consent: form.consent,
+                    p_policy_version: PRIVACY_POLICY_VERSION,
                   }),
                 `${form.first} ${form.last} registered. A player ID was issued.`,
               );
@@ -127,8 +129,14 @@ function PlayersScreen() {
                 onChange={(event) => setForm((current) => ({ ...current, consent: event.target.checked }))}
                 className="mt-1 size-5"
               />
-              The guardian consents to the club processing this player&apos;s and their own personal information for club
-              administration (POPIA).
+              <span>
+                The guardian has read the{" "}
+                <a href={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/privacy/?club=${clubId}`} target="_blank" rel="noopener noreferrer" className="text-emerald-800 underline">
+                  privacy and POPIA notice
+                </a>{" "}
+                (version {PRIVACY_POLICY_VERSION}) and consents to the club processing this player&apos;s and their own
+                personal information for club administration.
+              </span>
             </label>
             <Button type="submit" className="h-11 sm:col-span-2 lg:col-span-3">Register player</Button>
           </form>

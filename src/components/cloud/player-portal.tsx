@@ -2,6 +2,7 @@
 
 import { CloudGate, Notice, Panel } from "@/components/cloud/cloud-ui";
 import { must, useClubData } from "@/components/cloud/use-club-data";
+import { PortalPrivacy } from "@/components/cloud/portal-privacy";
 import { PlayerRadar } from "@/components/dashboard/player-radar";
 import { formatZar } from "@/lib/cloud/money";
 import { buildStatements } from "@/lib/cloud/statements";
@@ -78,6 +79,7 @@ function PortalScreen() {
           </div>
         );
       })}
+      <PortalPrivacy players={data.players} />
     </>
   );
 }

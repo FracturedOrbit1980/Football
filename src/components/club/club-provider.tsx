@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, type ReactNode } from "react";
 
+import { useCloudSession } from "@/components/cloud/cloud-session";
 import { isCloudMode } from "@/lib/cloud/client";
 import { createEmptyClub } from "@/lib/club/seed";
 import { BNFC_CLUB_ID } from "@/lib/club/registry";
@@ -12,7 +13,7 @@ import { useClubLibrary } from "@/stores/club-library";
 
 /** Routes backed by Supabase. They never read the on-device club store. */
 export function isCloudRoute(pathname: string) {
-  return /^\/(login|club|me|platform)(\/|$)/.test(pathname);
+  return /^\/(login|club|me|platform|privacy)(\/|$)/.test(pathname);
 }
 
 export function ClubProvider({ children }: { children: ReactNode }) {
@@ -22,6 +23,9 @@ export function ClubProvider({ children }: { children: ReactNode }) {
 }
 
 function LocalClubProvider({ children, pathname }: { children: ReactNode; pathname: string }) {
+  const cloud = useCloudSession();
+  const cloudClubId = cloud.enabled ? cloud.activeClubId : null;
+  const cloudClubName = cloud.activeClub?.name ?? "";
   const hydrated = useClubStore((state) => state.hydrated);
   const ready = useClubLibrary((state) => state.ready);
   const activeId = useClubLibrary((state) => state.activeId);
@@ -33,10 +37,16 @@ function LocalClubProvider({ children, pathname }: { children: ReactNode; pathna
 
   useEffect(() => {
     if (!ready) return;
-    if (!activeId && isCloudMode()) {
-      // Coach tools (drills, editor, live match) still keep their working data on this device.
-      void useClubLibrary.getState().load(BNFC_CLUB_ID);
-      return;
+    if (isCloudMode()) {
+      // Coach tools keep a per-club working copy on this device; drills and matches sync to the club.
+      if (cloudClubId && activeId !== `cloud-${cloudClubId}`) {
+        void useClubLibrary.getState().openCloudWorkspace(cloudClubId, cloudClubName);
+        return;
+      }
+      if (!cloudClubId && !activeId) {
+        void useClubLibrary.getState().load(BNFC_CLUB_ID);
+        return;
+      }
     }
     if (!activeId) {
       useClubStore.persist.setOptions({ name: "bnfc-club-pending" });
@@ -46,7 +56,7 @@ function LocalClubProvider({ children, pathname }: { children: ReactNode; pathna
     const club = useClubLibrary.getState().clubs.find((item) => item.id === activeId);
     if (!club) return;
     void loadClubData(activeId, club.kind);
-  }, [ready, activeId]);
+  }, [ready, activeId, cloudClubId, cloudClubName]);
 
   if (!ready || !hydrated) {
     return <p className="text-base font-semibold text-slate-800">Loading the club…</p>;

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -46,7 +47,11 @@ export function LoginForm() {
       <Notice text={notice} />
       <Notice text={error} tone="error" />
       <p className="text-xs font-medium text-slate-600">
-        Your club only sees the information it needs to run teams. Ask your club admin about the club&apos;s POPIA notice.
+        By signing in you acknowledge the{" "}
+        <Link href="/privacy" className="text-emerald-800 underline">
+          privacy and POPIA notice
+        </Link>
+        . Your club only sees the information it needs to run teams.
       </p>
     </form>
   );
