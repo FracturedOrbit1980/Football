@@ -744,7 +744,7 @@ function DrillEditorForm({ requestedId }: { requestedId: string | null }) {
               setPlaying(false);
               setFrameIndex(Math.round(Number(event.target.value)));
             }}
-            className="mt-1 block h-11 w-full accent-[#9a4a4f]"
+            className="mt-1 block h-11 w-full accent-[#0f766e]"
           />
         </div>
       </div>

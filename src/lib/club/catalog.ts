@@ -1,4 +1,4 @@
-export const CLUB_NAME = "Sportfica";
+export const CLUB_NAME = "Clubstride";
 
 export const MOMENTS_OF_GAME = [
   { id: "IP", label: "In possession" },

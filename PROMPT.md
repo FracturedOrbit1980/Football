@@ -1,7 +1,7 @@
-# SYSTEM SPECIFICATION: BENONI NORTHERNS FC APPLICATION PLATFORM
+# SYSTEM SPECIFICATION: CLUBSTRIDE APPLICATION PLATFORM
 
 ## 1. PROJECT OVERVIEW & GOALS
-Build a multi-tenant, role-based Progressive Web App (PWA) named Football, for the Sportfica club. 
+Build a multi-tenant, role-based Progressive Web App (PWA) named Football, for the Clubstride club. 
 The application manages a hierarchical club pipeline from grassroots to competitive youth squads.
 
 ### Primary Objectives:
@@ -37,7 +37,7 @@ CREATE TYPE user_role AS ENUM ('SUPER_ADMIN', 'HEAD_COACH', 'PLAYER');
 -- 1. CLUBS
 CREATE TABLE clubs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name VARCHAR(255) NOT NULL DEFAULT 'Sportfica',
+    name VARCHAR(255) NOT NULL DEFAULT 'Clubstride',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -230,7 +230,7 @@ export function DrillStopwatch({ drillTitle, targetSeconds = 300 }: { drillTitle
    - /player for PLAYER (profile, radar, attendance placeholder)
    A simple home/login placeholder is fine. Role switching for the demo can be a local dev control if auth is not wired to a real project yet — label it clearly as demo-only.
 
-PWA: add a minimal web app manifest and metadata so it is installable later. Product name: Football. Club name: Sportfica.
+PWA: add a minimal web app manifest and metadata so it is installable later. Product name: Football. Club name: Clubstride.
 
 Club visual tone: football club, clean, high contrast, readable in sunlight on a phone. Emerald/slate is fine as a starting palette.
 

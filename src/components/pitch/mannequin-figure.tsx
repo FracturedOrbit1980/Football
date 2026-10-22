@@ -23,5 +23,5 @@ function inkOn(hex: string) {
   const red = Number.parseInt(raw.slice(0, 2), 16);
   const green = Number.parseInt(raw.slice(2, 4), 16);
   const blue = Number.parseInt(raw.slice(4, 6), 16);
-  return (0.299 * red + 0.587 * green + 0.114 * blue) / 255 > 0.64 ? "#1e1d1b" : "#ffffff";
+  return (0.299 * red + 0.587 * green + 0.114 * blue) / 255 > 0.64 ? "#0b1b33" : "#ffffff";
 }

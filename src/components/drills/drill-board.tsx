@@ -13,6 +13,8 @@ import {
   SESSION_PHASES,
   clampPoint,
   boardColors,
+  DEFAULT_OPPONENT_COLOR,
+  DEFAULT_PLAYER_COLOR,
   pitchFill,
   emptyDrillBoard,
   blendFrames,
@@ -327,7 +329,7 @@ function DrillBoardEditor({
               setPlaying(false);
               setFrameIndex(Math.round(Number(event.target.value)));
             }}
-            className="mt-2 block h-11 w-full accent-[#9a4a4f]"
+            className="mt-2 block h-11 w-full accent-[#0f766e]"
           />
         </label>
       </div>
@@ -363,7 +365,7 @@ export function PitchLines({ view }: { view: PitchView }) {
           <line x1="66.6" y1="1" x2="66.6" y2="63" />
         </g>
       ) : null}
-      {view === "channel" ? <rect x="38" y="1" width="24" height="62" fill="#7a4045" fillOpacity="0.35" stroke="none" /> : null}
+      {view === "channel" ? <rect x="38" y="1" width="24" height="62" fill="#0b5f59" fillOpacity="0.35" stroke="none" /> : null}
     </g>
   );
 }
@@ -411,7 +413,7 @@ export function PieceShape({
   colors?: { player: string; opponent: string };
 }) {
   const ring = selected ? "#fef08a" : "#ffffff";
-  const palette = colors ?? { player: "#d16b6f", opponent: "#2563eb" };
+  const palette = colors ?? { player: DEFAULT_PLAYER_COLOR, opponent: DEFAULT_OPPONENT_COLOR };
   const person = piece.kind === "player" || piece.kind === "keeper" || piece.kind === "mannequin";
   const fill =
     piece.kind === "mannequin"

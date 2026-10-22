@@ -1,5 +1,5 @@
 export const CLUB_THEMES = [
-  { id: "red", name: "Club red", swatch: "#d16b6f" },
+  { id: "red", name: "Clubstride", swatch: "#0f766e" },
   { id: "navy", name: "Navy", swatch: "#2f6fad" },
   { id: "green", name: "Green", swatch: "#1f8a4c" },
   { id: "gold", name: "Gold", swatch: "#c9a227" },

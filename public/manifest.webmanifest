@@ -1,13 +1,13 @@
 {
   "name": "Football",
   "short_name": "Football",
-  "description": "Squads, drills, and pitch-side match tools for Sportfica",
+  "description": "Squads, drills, and pitch-side match tools for Clubstride",
   "id": "/Football/",
   "start_url": "/Football/",
   "scope": "/Football/",
   "display": "standalone",
-  "background_color": "#2a2d34",
-  "theme_color": "#d16b6f",
+  "background_color": "#0b1b33",
+  "theme_color": "#0b1b33",
   "icons": [
     {
       "src": "/Football/icons/icon-192.png",

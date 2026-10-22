@@ -38,14 +38,14 @@ export function PlayerRadar({
         <div className="h-72 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <RadarChart data={chartData} outerRadius="72%">
-              <PolarGrid stroke="#94a3b8" />
-              <PolarAngleAxis dataKey="metric" tick={{ fill: "#0f172a", fontSize: 13, fontWeight: 700 }} />
-              <PolarRadiusAxis domain={[0, 10]} tick={{ fill: "#334155", fontSize: 11 }} />
+              <PolarGrid stroke="#aeb9c7" />
+              <PolarAngleAxis dataKey="metric" tick={{ fill: "#0b1b33", fontSize: 13, fontWeight: 700 }} />
+              <PolarRadiusAxis domain={[0, 10]} tick={{ fill: "#5b677a", fontSize: 11 }} />
               <Radar
                 name="Score"
                 dataKey="score"
-                stroke="#047857"
-                fill="#10b981"
+                stroke="#0f766e"
+                fill="#14b8a6"
                 fillOpacity={0.45}
                 strokeWidth={2}
               />

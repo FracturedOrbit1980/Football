@@ -7,9 +7,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
-  --font-heading: var(--font-sans);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-inter), ui-monospace, monospace;
+  --font-heading: var(--font-manrope);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -49,70 +49,71 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.141 0.005 285.823);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.141 0.005 285.823);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.141 0.005 285.823);
-  --primary: #d16b6f;
-  --primary-foreground: #1e1d1b;
-  --shade-ink: #1e1d1b;
-  --shade-top: #d98a8d;
-  --shade-mid: #d16b6f;
-  --shade-bottom: #cd666a;
-  --shade-line: #c25d62;
-  --shade-top-hover: #e09a9c;
-  --quiet-ink: #1e1d1b;
-  --quiet-top: #fffcf8;
-  --quiet-mid: #f6f1ea;
-  --quiet-bottom: #e7e0d6;
-  --quiet-line: #d4cbc0;
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
-  --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.967 0.001 286.375);
-  --accent-foreground: oklch(0.21 0.006 285.885);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.705 0.015 286.067);
-  --chart-1: oklch(0.845 0.143 164.978);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.596 0.145 163.225);
-  --chart-4: oklch(0.508 0.118 165.612);
-  --chart-5: oklch(0.432 0.095 166.913);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-primary: #d16b6f;
-  --sidebar-primary-foreground: #1e1d1b;
-  --sidebar-accent: oklch(0.967 0.001 286.375);
-  --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
-  --sidebar-border: oklch(0.92 0.004 286.32);
-  --sidebar-ring: oklch(0.705 0.015 286.067);
+  --background: #f8fafc;
+  --foreground: #0b1b33;
+  --card: #ffffff;
+  --card-foreground: #0b1b33;
+  --popover: #ffffff;
+  --popover-foreground: #0b1b33;
+  --primary: #0f766e;
+  --primary-foreground: #ffffff;
+  --shade-ink: #ffffff;
+  --shade-top: #14b8a6;
+  --shade-mid: #0f766e;
+  --shade-bottom: #0d655e;
+  --shade-line: #0b5f59;
+  --shade-top-hover: #2dd4bf;
+  --quiet-ink: #0b1b33;
+  --quiet-top: #ffffff;
+  --quiet-mid: #f2f5f9;
+  --quiet-bottom: #e6ebf1;
+  --quiet-line: #d0d8e2;
+  --secondary: #f2f5f9;
+  --secondary-foreground: #0b1b33;
+  --muted: #f2f5f9;
+  --muted-foreground: #5b677a;
+  --accent: #ecfaf8;
+  --accent-foreground: #0b5f59;
+  --destructive: #c62828;
+  --border: #d0d8e2;
+  --input: #8391a3;
+  --ring: #0f766e;
+  --chart-1: #0f766e;
+  --chart-2: #14b8a6;
+  --chart-3: #2dd4bf;
+  --chart-4: #c8f230;
+  --chart-5: #0b1b33;
+  --radius: 0.75rem;
+  --sidebar: #0b1b33;
+  --sidebar-foreground: #f2f5f9;
+  --sidebar-primary: #0f766e;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #13284a;
+  --sidebar-accent-foreground: #f2f5f9;
+  --sidebar-border: #26354d;
+  --sidebar-ring: #c8f230;
 }
 
+/* Clubstride brand ramp. Components use the emerald scale as the club-colour alias. */
 @theme {
-  --color-emerald-50: #fff5f5;
-  --color-emerald-100: #f8d6d8;
-  --color-emerald-200: #f3b4b6;
-  --color-emerald-300: #f8d058;
-  --color-emerald-400: #f8d058;
-  --color-emerald-500: #d16b6f;
-  --color-emerald-600: #9a4a4f;
-  --color-emerald-700: #7a4045;
-  --color-emerald-800: #9a4a4f;
-  --color-emerald-900: #1e1d1b;
-  --color-emerald-950: #121110;
+  --color-emerald-50: #ecfaf8;
+  --color-emerald-100: #cdf1ec;
+  --color-emerald-200: #99e6db;
+  --color-emerald-300: #c8f230;
+  --color-emerald-400: #14b8a6;
+  --color-emerald-500: #0d9488;
+  --color-emerald-600: #0f766e;
+  --color-emerald-700: #0b5f59;
+  --color-emerald-800: #094b46;
+  --color-emerald-900: #073b37;
+  --color-emerald-950: #0b1b33;
 }
 
 html[data-club-theme="navy"] {
   --color-emerald-50: #f3f7fc;
   --color-emerald-100: #d5e4f5;
   --color-emerald-200: #a9c6ea;
-  --color-emerald-300: #f8d058;
+  --color-emerald-300: #c8f230;
   --color-emerald-400: #7eb0e4;
   --color-emerald-500: #3d82c4;
   --color-emerald-600: #1d4e89;
@@ -136,7 +137,7 @@ html[data-club-theme="green"] {
   --color-emerald-50: #f1faf4;
   --color-emerald-100: #d3f0de;
   --color-emerald-200: #a6e0bc;
-  --color-emerald-300: #f8d058;
+  --color-emerald-300: #c8f230;
   --color-emerald-400: #5dcc86;
   --color-emerald-500: #1f8a4c;
   --color-emerald-600: #146c3a;
@@ -160,19 +161,19 @@ html[data-club-theme="gold"] {
   --color-emerald-50: #fff9e8;
   --color-emerald-100: #f8e7b0;
   --color-emerald-200: #f0d27a;
-  --color-emerald-300: #f8d058;
+  --color-emerald-300: #c8f230;
   --color-emerald-400: #e2c15a;
   --color-emerald-500: #c9a227;
   --color-emerald-600: #8a7010;
   --color-emerald-700: #6e590d;
   --color-emerald-800: #8a7010;
-  --color-emerald-900: #1e1d1b;
-  --color-emerald-950: #121110;
+  --color-emerald-900: #0b1b33;
+  --color-emerald-950: #060d18;
   --primary: #c9a227;
   --sidebar-primary: #c9a227;
-  --primary-foreground: #1e1d1b;
-  --sidebar-primary-foreground: #1e1d1b;
-  --shade-ink: #1e1d1b;
+  --primary-foreground: #0b1b33;
+  --sidebar-primary-foreground: #0b1b33;
+  --shade-ink: #0b1b33;
   --shade-top: #d4b552;
   --shade-mid: #c9a227;
   --shade-bottom: #b59223;
@@ -184,7 +185,7 @@ html[data-club-theme="blue"] {
   --color-emerald-50: #f4f5fc;
   --color-emerald-100: #d9def6;
   --color-emerald-200: #b3bced;
-  --color-emerald-300: #f8d058;
+  --color-emerald-300: #c8f230;
   --color-emerald-400: #8d98e2;
   --color-emerald-500: #3b4cc0;
   --color-emerald-600: #2a3490;
@@ -205,40 +206,40 @@ html[data-club-theme="blue"] {
 }
 
 .dark {
-  --background: #141312;
-  --foreground: #faf7f2;
-  --card: rgb(42 38 34 / 0.82);
-  --card-foreground: #faf7f2;
-  --popover: #2a2622;
-  --popover-foreground: #faf7f2;
-  --primary-foreground: #1e1d1b;
-  --quiet-ink: #faf7f2;
-  --quiet-top: #4a433c;
-  --quiet-mid: #3a342e;
-  --quiet-bottom: #2c2824;
-  --quiet-line: #5c554c;
-  --secondary: oklch(0.274 0.006 286.033);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.274 0.006 286.033);
-  --muted-foreground: oklch(0.705 0.015 286.067);
-  --accent: oklch(0.274 0.006 286.033);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.552 0.016 285.938);
-  --chart-1: oklch(0.845 0.143 164.978);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.596 0.145 163.225);
-  --chart-4: oklch(0.508 0.118 165.612);
-  --chart-5: oklch(0.432 0.095 166.913);
-  --sidebar: #121110;
-  --sidebar-foreground: #faf7f2;
-  --sidebar-primary-foreground: #1e1d1b;
-  --sidebar-accent: oklch(0.274 0.006 286.033);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.552 0.016 285.938);
+  --background: #0a1220;
+  --foreground: #f2f5f9;
+  --card: rgb(24 37 58 / 0.82);
+  --card-foreground: #f2f5f9;
+  --popover: #18253a;
+  --popover-foreground: #f2f5f9;
+  --primary-foreground: #ffffff;
+  --quiet-ink: #f2f5f9;
+  --quiet-top: #1e2735;
+  --quiet-mid: #131a26;
+  --quiet-bottom: #0a1018;
+  --quiet-line: #3a4a63;
+  --secondary: #13284a;
+  --secondary-foreground: #f2f5f9;
+  --muted: #111c2e;
+  --muted-foreground: #aeb9c7;
+  --accent: #13284a;
+  --accent-foreground: #f2f5f9;
+  --destructive: #f87171;
+  --border: #26354d;
+  --input: #5b6b84;
+  --ring: #c8f230;
+  --chart-1: #2dd4bf;
+  --chart-2: #14b8a6;
+  --chart-3: #c8f230;
+  --chart-4: #7dd3fc;
+  --chart-5: #aeb9c7;
+  --sidebar: #0b1b33;
+  --sidebar-foreground: #f2f5f9;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #13284a;
+  --sidebar-accent-foreground: #f2f5f9;
+  --sidebar-border: #26354d;
+  --sidebar-ring: #c8f230;
 }
 
 @layer base {
@@ -247,6 +248,13 @@ html[data-club-theme="blue"] {
   }
   body {
     @apply bg-background text-foreground;
+    /* CI: Inter carries tabular figures so squad numbers, minutes and clocks align. */
+    font-variant-numeric: tabular-nums;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply font-heading;
   }
   html {
     @apply font-sans;
@@ -307,7 +315,7 @@ html[data-club-theme="blue"] {
   border-radius: 0.75rem;
   background: rgb(255 255 255 / 0.78);
   padding: 0.85rem 1rem;
-  box-shadow: 0 10px 28px rgb(30 29 27 / 0.06);
+  box-shadow: 0 10px 28px rgb(11 27 51 / 0.06);
 }
 
 .editor-tool {
@@ -324,7 +332,7 @@ html[data-club-theme="blue"] {
   max-width: 14rem;
   transform: translateY(-50%);
   border-radius: 0.5rem;
-  background: #1e1d1b;
+  background: #0b1b33;
   color: #fff;
   padding: 0.35rem 0.55rem;
   font-size: 0.75rem;
@@ -373,28 +381,28 @@ html[data-club-theme="blue"] {
 }
 
 html {
-  --color-slate-100: #f3efe9;
+  --color-slate-100: #f2f5f9;
   color-scheme: light;
 }
 
 html.dark {
   color-scheme: dark;
-  --color-slate-50: #221f1c;
-  --color-slate-100: #1a1816;
-  --color-slate-200: #3a352f;
-  --color-slate-300: #4a453f;
-  --color-slate-400: #8d867c;
-  --color-slate-500: #a8a199;
-  --color-slate-600: #c9c2b8;
-  --color-slate-700: #ddd6cc;
-  --color-slate-800: #ebe6df;
-  --color-slate-900: #f3eee8;
-  --color-slate-950: #faf7f2;
+  --color-slate-50: #111c2e;
+  --color-slate-100: #0f1a2c;
+  --color-slate-200: #26354d;
+  --color-slate-300: #3a4a63;
+  --color-slate-400: #5b6b84;
+  --color-slate-500: #8391a3;
+  --color-slate-600: #aeb9c7;
+  --color-slate-700: #d0d8e2;
+  --color-slate-800: #e6ebf1;
+  --color-slate-900: #f2f5f9;
+  --color-slate-950: #ffffff;
 }
 
 .app-chrome {
-  background: #121110;
-  color: #f8f5f0;
+  background: #0b1b33;
+  color: #f2f5f9;
 }
 
 .ink-panel {
@@ -416,31 +424,31 @@ html:not(.dark) .bg-white,
 [data-slot="card"] {
   background-color: rgb(255 255 255 / 0.78);
   backdrop-filter: blur(14px);
-  box-shadow: 0 10px 28px rgb(30 29 27 / 0.06);
+  box-shadow: 0 10px 28px rgb(11 27 51 / 0.06);
 }
 
 html.dark .bg-white,
 html.dark [data-slot="card"] {
-  background-color: rgb(42 38 34 / 0.82);
+  background-color: rgb(24 37 58 / 0.82);
   backdrop-filter: blur(16px);
   box-shadow: 0 12px 32px rgb(0 0 0 / 0.22);
 }
 
 html.dark .ink-panel .bg-white {
   background-color: #fff;
-  color: #1e1d1b;
+  color: #0b1b33;
   backdrop-filter: none;
   box-shadow: none;
 }
 
 html.dark .editor-descriptions {
-  background: rgb(42 38 34 / 0.82);
+  background: rgb(24 37 58 / 0.82);
   box-shadow: 0 12px 32px rgb(0 0 0 / 0.22);
 }
 
 html.dark .text-emerald-700,
 html.dark .text-emerald-800 {
-  color: var(--color-emerald-300);
+  color: #2dd4bf;
 }
 
 .btn-shade,
@@ -454,18 +462,18 @@ html.dark .text-emerald-800 {
   color: var(--shade-ink);
   background-image: linear-gradient(180deg, var(--shade-top) 0%, var(--shade-mid) 52%, var(--shade-bottom) 100%);
   border: 1px solid var(--shade-line);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.28), 0 1px 2px rgb(30 29 27 / 0.12);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.28), 0 1px 2px rgb(11 27 51 / 0.12);
 }
 
 .btn-quiet {
   color: var(--quiet-ink);
   background-image: linear-gradient(180deg, var(--quiet-top) 0%, var(--quiet-mid) 58%, var(--quiet-bottom) 100%);
   border: 1px solid var(--quiet-line);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.45), 0 1px 1px rgb(30 29 27 / 0.06);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.45), 0 1px 1px rgb(11 27 51 / 0.06);
 }
 
 .btn-chrome {
-  color: #f7f4ef;
+  color: #f2f5f9;
   background-image: linear-gradient(180deg, rgb(255 255 255 / 0.16), rgb(255 255 255 / 0.07));
   border: 1px solid rgb(255 255 255 / 0.2);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.22), 0 1px 1px rgb(0 0 0 / 0.16);
@@ -474,12 +482,12 @@ html.dark .text-emerald-800 {
 .btn-shade:hover:not(:disabled),
 a.btn-shade:hover {
   background-image: linear-gradient(180deg, var(--shade-top-hover) 0%, var(--shade-top) 48%, var(--shade-mid) 100%);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.4), 0 2px 4px rgb(30 29 27 / 0.12);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.4), 0 2px 4px rgb(11 27 51 / 0.12);
 }
 
 .btn-quiet:hover:not(:disabled) {
   background-image: linear-gradient(180deg, var(--quiet-top) 0%, var(--quiet-top) 40%, var(--quiet-mid) 100%);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.55), 0 2px 3px rgb(30 29 27 / 0.08);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.55), 0 2px 3px rgb(11 27 51 / 0.08);
 }
 
 .btn-chrome:hover:not(:disabled) {
@@ -501,7 +509,7 @@ a.btn-shade:active {
 
 .btn-quiet:active:not(:disabled) {
   background-image: linear-gradient(180deg, var(--quiet-bottom) 0%, var(--quiet-mid) 100%);
-  box-shadow: inset 0 2px 3px rgb(30 29 27 / 0.16);
+  box-shadow: inset 0 2px 3px rgb(11 27 51 / 0.16);
 }
 
 .btn-chrome:active:not(:disabled) {
@@ -549,5 +557,5 @@ input[type="file"]::file-selector-button {
   color: var(--shade-ink);
   background-image: linear-gradient(180deg, var(--shade-top) 0%, var(--shade-mid) 52%, var(--shade-bottom) 100%);
   border: 1px solid var(--shade-line);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.28), 0 1px 2px rgb(30 29 27 / 0.12);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.28), 0 1px 2px rgb(11 27 51 / 0.12);
 }

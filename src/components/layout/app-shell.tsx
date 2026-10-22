@@ -16,7 +16,7 @@ import { useRole } from "@/components/auth/role-session";
 import { AppearanceToggle } from "@/components/layout/appearance";
 import { SignOutButton } from "@/components/layout/sign-out-button";
 import { ROLE_HOME, ROLE_LABEL, type UserRole } from "@/lib/auth/roles";
-import { BNFC_CLUB_ID } from "@/lib/club/registry";
+import { DEFAULT_CLUB_ID } from "@/lib/club/registry";
 import { activeClub, useClubLibrary } from "@/stores/club-library";
 
 const NAV: Record<UserRole, { href: string; label: string; icon: typeof Users }[]> = {
@@ -137,10 +137,10 @@ export function AppShell({ children }: { children: ReactNode }) {
 
 function ClubMark({ club }: { club: ReturnType<typeof activeClub> }) {
   const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
-  const src = club?.logo || (club?.id === BNFC_CLUB_ID ? `${base}/icons/bnfc-logo.jpg` : "");
+  const src = club?.logo || (club?.id === DEFAULT_CLUB_ID ? `${base}/icons/clubstride-symbol.png` : "");
   if (!src) {
     return (
-      <span className="grid size-10 shrink-0 place-items-center rounded-full bg-emerald-500 text-xs font-black text-[#1e1d1b]">
+      <span className="grid size-10 shrink-0 place-items-center rounded-full bg-emerald-500 text-xs font-black text-white">
         {(club?.name ?? "C").slice(0, 1).toUpperCase()}
       </span>
     );

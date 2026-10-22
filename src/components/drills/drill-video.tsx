@@ -66,7 +66,7 @@ export function DrillVideo({
         />
       </label>
       {videoUrl ? (
-        <video data-drill-video controls src={videoUrl} className="mt-1 w-full max-w-md rounded-lg bg-[#121110]" />
+        <video data-drill-video controls src={videoUrl} className="mt-1 w-full max-w-md rounded-lg bg-[#0b1b33]" />
       ) : (
         <p className="text-sm font-semibold text-slate-700">No video yet.</p>
       )}

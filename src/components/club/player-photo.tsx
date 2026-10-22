@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { MannequinFigure } from "@/components/pitch/mannequin-figure";
+import { DEFAULT_PLAYER_COLOR } from "@/lib/club/board";
 import { readPlayerPhoto } from "@/lib/club/photo";
 
 const SIZE = {
@@ -38,7 +39,7 @@ export function PlayerPortrait({
       aria-hidden="true"
       className={`${box} shrink-0 rounded-full bg-emerald-700 ring-1 ring-slate-300`}
     >
-      <MannequinFigure fill="#d16b6f" ring="#ffffff" label="" />
+      <MannequinFigure fill={DEFAULT_PLAYER_COLOR} ring="#ffffff" label="" />
       <title>{name ? `${name} has no picture` : "No picture"}</title>
     </svg>
   );

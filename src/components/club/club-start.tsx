@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import { RolePicker } from "@/components/auth/role-picker";
 import { CLUB_NAME } from "@/lib/club/catalog";
-import { BNFC_CLUB_ID, type ClubProfile } from "@/lib/club/registry";
+import { DEFAULT_CLUB_ID, type ClubProfile } from "@/lib/club/registry";
 import { CLUB_THEMES, type ClubThemeId } from "@/lib/club/themes";
 import { activeClub, useClubLibrary } from "@/stores/club-library";
 
@@ -184,7 +184,7 @@ function ClubForm({
 
 function ClubLogo({ club }: { club: ClubProfile }) {
   const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
-  const src = club.logo || (club.id === BNFC_CLUB_ID ? `${base}/icons/bnfc-logo.jpg` : "");
+  const src = club.logo || (club.id === DEFAULT_CLUB_ID ? `${base}/icons/clubstride-symbol.png` : "");
   if (!src) {
     return (
       <span className="grid size-12 shrink-0 place-items-center rounded-full bg-emerald-600 text-sm font-black text-white">
@@ -196,7 +196,7 @@ function ClubLogo({ club }: { club: ClubProfile }) {
 }
 
 function themeName(id: ClubThemeId) {
-  return CLUB_THEMES.find((theme) => theme.id === id)?.name ?? "Club red";
+  return CLUB_THEMES.find((theme) => theme.id === id)?.name ?? "Clubstride";
 }
 
 function readLogo(file: File) {

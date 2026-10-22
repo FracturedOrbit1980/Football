@@ -46,8 +46,8 @@ export interface PitchPoint {
 
 export type PieceTeam = "player" | "opponent";
 
-export const DEFAULT_PLAYER_COLOR = "#d16b6f";
-export const DEFAULT_OPPONENT_COLOR = "#2563eb";
+export const DEFAULT_PLAYER_COLOR = "#c8f230";
+export const DEFAULT_OPPONENT_COLOR = "#1d4ed8";
 export const DEFAULT_PITCH_COLOR = "#047857";
 
 export interface BoardPiece {

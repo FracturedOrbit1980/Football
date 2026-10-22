@@ -24,7 +24,7 @@ export function DrillSetupDiagram({ diagram, pitchSetup, size = "md" }: DiagramP
       aria-label={`Setup diagram. ${pitchSetup}`}
       className="shrink-0 rounded-lg bg-emerald-50 ring-1 ring-emerald-700"
     >
-      <rect x="1" y="1" width="158" height="98" rx="8" fill="#fff5f5" stroke="#9a4a4f" strokeWidth="2" />
+      <rect x="1" y="1" width="158" height="98" rx="8" fill="#ecfaf8" stroke="#0f766e" strokeWidth="2" />
       <SetupShape diagram={diagram} />
     </svg>
   );
