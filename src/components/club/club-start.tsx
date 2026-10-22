@@ -15,8 +15,10 @@ export function ClubStart() {
   const load = useClubLibrary((state) => state.load);
   const addClub = useClubLibrary((state) => state.addClub);
   const updateClub = useClubLibrary((state) => state.updateClub);
+  const deleteClub = useClubLibrary((state) => state.deleteClub);
   const current = activeClub(clubs, activeId);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   if (!ready) return null;
 
@@ -56,6 +58,19 @@ export function ClubStart() {
                 >
                   Edit
                 </button>
+                {club.id === DEFAULT_CLUB_ID ? null : (
+                  <button
+                    type="button"
+                    data-delete-club={club.id}
+                    onClick={() => {
+                      setEditingId(null);
+                      setPendingDeleteId(pendingDeleteId === club.id ? null : club.id);
+                    }}
+                    className="btn-quiet min-h-11 shrink-0 rounded-lg px-4 text-sm font-bold"
+                  >
+                    Delete
+                  </button>
+                )}
               </div>
             </div>
             {editingId === club.id ? (
@@ -67,6 +82,32 @@ export function ClubStart() {
                   setEditingId(null);
                 }}
               />
+            ) : null}
+            {pendingDeleteId === club.id ? (
+              <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl bg-slate-100 p-4 ring-1 ring-slate-300">
+                <p className="min-w-0 flex-1 basis-48 text-sm font-bold leading-relaxed text-slate-800">
+                  Delete {club.name}? Its players, drills, and match records go with it.
+                </p>
+                <button
+                  type="button"
+                  data-confirm-delete-club={club.id}
+                  onClick={() => {
+                    deleteClub(club.id);
+                    setPendingDeleteId(null);
+                  }}
+                  className="btn-danger min-h-11 shrink-0 rounded-lg px-4 text-sm font-bold"
+                >
+                  Delete club
+                </button>
+                <button
+                  type="button"
+                  data-cancel-delete-club={club.id}
+                  onClick={() => setPendingDeleteId(null)}
+                  className="btn-quiet min-h-11 shrink-0 rounded-lg px-4 text-sm font-bold"
+                >
+                  Keep club
+                </button>
+              </div>
             ) : null}
           </article>
         ))}

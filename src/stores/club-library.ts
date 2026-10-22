@@ -2,7 +2,13 @@
 
 import { create } from "zustand";
 
-import { readRegistry, writeRegistry, type ClubProfile } from "@/lib/club/registry";
+import {
+  DEFAULT_CLUB_ID,
+  clubDataKey,
+  readRegistry,
+  writeRegistry,
+  type ClubProfile,
+} from "@/lib/club/registry";
 import type { ClubThemeId } from "@/lib/club/themes";
 import { loadClubData, useClubStore } from "@/stores/club-store";
 
@@ -14,6 +20,7 @@ interface LibraryState {
   load: (id: string) => Promise<void>;
   addClub: (input: { name: string; logo: string; theme: ClubThemeId }) => Promise<void>;
   updateClub: (id: string, input: { name: string; logo: string; theme: ClubThemeId }) => void;
+  deleteClub: (id: string) => void;
 }
 
 function save(clubs: ClubProfile[], activeId: string | null) {
@@ -62,6 +69,20 @@ export const useClubLibrary = create<LibraryState>((set, get) => ({
     );
     save(clubs, get().activeId);
     set({ clubs });
+  },
+  deleteClub: (id) => {
+    if (id === DEFAULT_CLUB_ID) return;
+    const clubs = get().clubs.filter((club) => club.id !== id);
+    const wasActive = get().activeId === id;
+    if (wasActive) {
+      // The store writes to whichever key it points at, so detach it before clearing or the
+      // deleted club's data is immediately written back.
+      useClubStore.persist.setOptions({ name: "bnfc-club-pending" });
+      useClubStore.setState({ hydrated: false });
+    }
+    localStorage.removeItem(clubDataKey(id));
+    save(clubs, wasActive ? null : get().activeId);
+    set(wasActive ? { clubs, activeId: null } : { clubs });
   },
 }));
 
