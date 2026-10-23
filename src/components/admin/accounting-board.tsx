@@ -7,10 +7,11 @@ import { Button } from "@/components/ui/button";
 import { ageAnalysis, bucketOf, chargedOf, creditOf, daysOverdue, isIsoDate, outstandingOf, paidTotal, rand, sponsorCreditOf, todayIso, AGE_BUCKETS, type AgeBucket } from "@/lib/club/accounting";
 import { ageLabel, ensureYouthAges } from "@/lib/club/age";
 import { planProgress, promiseStatus } from "@/lib/club/agreements";
+import { chaseState, creditSummary, daysSince, lastContact } from "@/lib/club/credit";
 import { paymentDetailsLines } from "@/lib/club/registry";
 import { searchPlayers } from "@/lib/club/registration";
 import type { ClubPlayer } from "@/lib/club/seed";
-import { printStatement, statementBalanceLine, statementMailto, type StatementContext } from "@/lib/club/statement";
+import { printReminder, printReminders, printStatement, reminderTitle, statementBalanceLine, statementMailto, type ReminderEntry, type StatementContext } from "@/lib/club/statement";
 import { formatDay } from "@/lib/club/week";
 import { useClubStore } from "@/stores/club-store";
 import { activeClub, useClubLibrary } from "@/stores/club-library";
@@ -33,6 +34,7 @@ const STATUS_STYLE: Record<FeeStatus, string> = {
 
 export function AccountingBoard() {
   const players = useClubStore((state) => state.players);
+  const addCorrespondence = useClubStore((state) => state.addCorrespondence);
   const ageGroups = ensureYouthAges(useClubStore((state) => state.ageGroups));
   const club = activeClub(
     useClubLibrary((state) => state.clubs),
@@ -42,6 +44,9 @@ export function AccountingBoard() {
   const [filter, setFilter] = useState("");
   const [query, setQuery] = useState("");
   const [bucket, setBucket] = useState<AgeBucket | "">("");
+  const [chaseOnly, setChaseOnly] = useState(false);
+  const [reminderNotice, setReminderNotice] = useState("");
+  const [reminderError, setReminderError] = useState("");
   const teams = ageGroups.flatMap((group) =>
     group.teams.map((team) => ({ ...team, label: `${ageLabel(group.name)} · ${team.division ?? team.name}` })),
   );
@@ -57,9 +62,18 @@ export function AccountingBoard() {
     .filter((player) => (filter === "" ? true : filter === "none" ? !player.teamId : player.teamId === filter))
     .slice()
     .sort((a, b) => a.squadNumber - b.squadNumber || a.name.localeCompare(b.name));
-  const visible = bucket
+  const chaseStates = new Map(scoped.map((player) => [player.id, chaseState(player)]));
+  const chaseIds = new Set(
+    scoped.filter((player) => {
+      const state = chaseStates.get(player.id);
+      return Boolean(state && !state.hold);
+    }).map((player) => player.id),
+  );
+  const matched = bucket
     ? scoped.filter((player) => outstandingOf(player) > 0 && bucketOf(daysOverdue(player)) === bucket)
     : scoped;
+  const visible = matched.filter((player) => (chaseOnly ? chaseIds.has(player.id) : true));
+  if (chaseOnly) visible.sort((a, b) => (chaseStates.get(b.id)?.days ?? 0) - (chaseStates.get(a.id)?.days ?? 0));
   const totals = scoped.reduce(
     (sum, player) => ({
       billed: sum.billed + player.seasonFee,
@@ -72,6 +86,38 @@ export function AccountingBoard() {
   const awaiting = scoped.filter((player) => player.seasonFee > 0 && outstandingOf(player) > 0).length;
   const ageing = ageAnalysis(scoped);
   const paymentLines = club ? paymentDetailsLines(club) : [];
+  const credit = creditSummary(scoped);
+  const reminderEntries: ReminderEntry[] = visible.flatMap((player) => {
+    const state = chaseStates.get(player.id);
+    if (!state || state.hold) return [];
+    return [
+      {
+        player,
+        state,
+        context: { clubName, teamLabel: labelOf(player), guardian: player.guardianName, paymentLines },
+      },
+    ];
+  });
+
+  function remindAll() {
+    if (reminderEntries.length === 0) return;
+    if (!printReminders(reminderEntries, clubName)) {
+      setReminderError("Allow pop-ups to print the reminders.");
+      setReminderNotice("");
+      return;
+    }
+    for (const entry of reminderEntries) {
+      addCorrespondence(
+        entry.player.id,
+        "Print",
+        `${reminderTitle(entry.state.stage)} printed for ${entry.player.guardianName || "the guardian"}.`,
+      );
+    }
+    setReminderNotice(
+      `${reminderEntries.length} ${reminderEntries.length === 1 ? "reminder" : "reminders"} printed and added to correspondence.`,
+    );
+    setReminderError("");
+  }
 
   return (
     <div className="space-y-6">
@@ -109,9 +155,9 @@ export function AccountingBoard() {
         </div>
         <p className="mt-3 text-sm font-medium text-slate-600">
           Each account lists its balance and ageing. Use Record payment to capture money received, Fee to set the season
-          fee, due date and guardian, and Statement to preview, print or email it. Club sponsorship is credited against
-          the fee, so outstanding is the fee less sponsorship less what was paid. Totals and the age analysis below cover{" "}
-          {filterLabel}
+          fee, due date and guardian, Statement to preview, print or email it, and Remind to print the next chase letter.
+          Club sponsorship is credited against the fee, so outstanding is the fee less sponsorship less what was paid.
+          Totals and the age analysis below cover {filterLabel}
           {query.trim() ? ` matching "${query.trim()}"` : ""}.
         </p>
       </section>
@@ -121,6 +167,62 @@ export function AccountingBoard() {
         <Total label="Received" value={rand(totals.received)} />
         <Total label="Outstanding" value={rand(totals.outstanding)} emphasis />
         <Total label="Accounts awaiting" value={String(awaiting)} />
+      </section>
+
+      <section className="rounded-xl bg-white p-4 ring-1 ring-slate-300" aria-label="Credit control" data-credit-control>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="text-sm font-bold uppercase tracking-wide text-slate-700">Credit control</h2>
+            <p className="mt-1 text-sm font-medium text-slate-700" data-credit-summary>
+              <span className="font-black text-slate-950">{credit.chase}</span>{" "}
+              {credit.chase === 1 ? "account" : "accounts"} to chase
+              {credit.held > 0 ? (
+                <>
+                  {" · "}
+                  <span className="font-black text-slate-950">{credit.held}</span> on hold
+                </>
+              ) : null}
+              {credit.broken > 0 ? (
+                <>
+                  {" · "}
+                  <span className="font-bold text-rose-800">
+                    {credit.broken} {credit.broken === 1 ? "arrangement" : "arrangements"} broken
+                  </span>
+                </>
+              ) : null}
+              {credit.oldest > 0 ? (
+                <>
+                  {" · "}oldest {credit.oldest} {credit.oldest === 1 ? "day" : "days"}
+                </>
+              ) : null}
+              {credit.overdue > 0 ? <>{" · "}{rand(credit.overdue)} overdue</> : null}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="lg"
+              variant="outline"
+              aria-pressed={chaseOnly}
+              data-chase-filter
+              onClick={() => setChaseOnly(!chaseOnly)}
+              className={`h-11 ${chaseOnly ? "ring-2 ring-emerald-600" : ""}`}
+            >
+              {chaseOnly ? "Show all accounts" : `Only accounts to chase${credit.chase > 0 ? ` (${credit.chase})` : ""}`}
+            </Button>
+            {reminderEntries.length > 0 ? (
+              <Button type="button" size="lg" data-remind-all onClick={remindAll} className="h-11">
+                Remind all ({reminderEntries.length})
+              </Button>
+            ) : null}
+          </div>
+        </div>
+        <p className="mt-2 text-sm font-medium text-slate-600">
+          Reminders follow the age buckets: a reminder up to 30 days, a second reminder to 60, a final demand to 90, then
+          handover. An open promise to pay or an agreement on track pauses chasing.
+        </p>
+        {reminderNotice ? <p className="mt-2 text-sm font-semibold text-emerald-800" data-remind-notice>{reminderNotice}</p> : null}
+        {reminderError ? <p className="mt-2 text-sm font-semibold text-rose-700" data-remind-error>{reminderError}</p> : null}
       </section>
 
       <section aria-label="Age analysis">
@@ -173,8 +275,10 @@ export function AccountingBoard() {
         </h2>
         {visible.length === 0 ? (
           <p className="mt-2 rounded-lg bg-white px-4 py-3 text-sm font-medium text-slate-600 ring-1 ring-slate-300">
-            {bucket || query.trim()
-              ? "No account matches this filter. Clear the search or choose another bucket."
+            {bucket || query.trim() || chaseOnly
+              ? chaseOnly && !bucket && !query.trim()
+                ? "Nothing to chase. Accounts with an open promise or an agreement on track are on hold."
+                : "No account matches this filter. Clear the search or choose another bucket."
               : "No players match this filter. Register players on People, then set their fee here."}
           </p>
         ) : (
@@ -239,6 +343,9 @@ function AccountRow({
   const sponsored = sponsorCreditOf(player);
   const progress = planProgress(player);
   const promised = promiseStatus(player);
+  const chase = chaseState(player);
+  const contact = lastContact(player);
+  const daysAgo = contact ? daysSince(contact.date) : null;
   const context: StatementContext = {
     clubName,
     teamLabel,
@@ -261,6 +368,19 @@ function AccountRow({
       setError("");
     } else {
       setError("Allow pop-ups to print the statement.");
+      setNotice("");
+    }
+  }
+
+  function printChase() {
+    if (!chase) return;
+    const title = reminderTitle(chase.stage);
+    if (printReminder(player, context, chase)) {
+      addCorrespondence(player.id, "Print", `${title} printed for ${guardianName || player.guardianName || "the guardian"}.`);
+      setNotice(`${title} printed and added to correspondence.`);
+      setError("");
+    } else {
+      setError("Allow pop-ups to print the reminder.");
       setNotice("");
     }
   }
@@ -314,6 +434,23 @@ function AccountRow({
         </p>
       ) : null}
 
+      {chase ? (
+        <p className="mt-1 text-sm" data-account-chase>
+          {chase.hold ? (
+            <span className="font-semibold text-slate-700">
+              Chasing paused · {chase.hold === "Promise" ? "promise to pay open" : "agreement on track"}.
+            </span>
+          ) : (
+            <span className="font-semibold text-amber-900">Next step: {chase.stage}.</span>
+          )}{" "}
+          <span className="font-medium text-slate-600">
+            {contact && daysAgo !== null
+              ? `Last contact ${daysAgo === 0 ? "today" : daysAgo === 1 ? "yesterday" : `${daysAgo} days ago`} (${contact.channel}).`
+              : "No contact logged yet."}
+          </span>
+        </p>
+      ) : null}
+
       <dl className="mt-3 flex flex-wrap items-baseline gap-x-6 gap-y-1 text-sm" data-account-money>
         <div className="flex items-baseline gap-2">
           <dt className="font-semibold text-slate-600">Billed</dt>
@@ -356,6 +493,18 @@ function AccountRow({
         <Button type="button" size="lg" variant="outline" className="h-11" onClick={printQuick}>
           Print
         </Button>
+        {chase && !chase.hold ? (
+          <Button
+            type="button"
+            size="lg"
+            variant="outline"
+            className="h-11"
+            data-field={`remind-${player.id}`}
+            onClick={printChase}
+          >
+            Remind
+          </Button>
+        ) : null}
         {mailto ? (
           <Button asChild size="lg" variant="outline" className="h-11">
             <a
