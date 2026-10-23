@@ -8,7 +8,7 @@ import { ROLE_LABEL, type UserRole } from "@/lib/auth/roles";
 const ROLES: { role: UserRole; detail: string }[] = [
   {
     role: "SUPER_ADMIN",
-    detail: "Register players, allocate them to a team and league, then open the drill library.",
+    detail: "The club you registered only: players, teams, fees, and the drill library.",
   },
   {
     role: "HEAD_COACH",
@@ -18,13 +18,17 @@ const ROLES: { role: UserRole; detail: string }[] = [
     role: "PLAYER",
     detail: "Your profile, homework, and attendance once you are on a squad.",
   },
+  {
+    role: "DEVELOPER",
+    detail: "Every registered club, with the club list and balances across all of them.",
+  },
 ];
 
 export function RolePicker() {
   const { signIn } = useRole();
 
   return (
-    <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
       {ROLES.map((item) => (
         <Card key={item.role}>
           <CardHeader>

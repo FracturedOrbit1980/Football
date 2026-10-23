@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { RolePicker } from "@/components/auth/role-picker";
+import { useRole } from "@/components/auth/role-session";
 import { CLUB_NAME } from "@/lib/club/catalog";
 import {
   DEFAULT_CLUB_ID,
@@ -25,8 +26,14 @@ export function ClubStart() {
   const updateClub = useClubLibrary((state) => state.updateClub);
   const deleteClub = useClubLibrary((state) => state.deleteClub);
   const current = activeClub(clubs, activeId);
+  const { role, clubScope } = useRole();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const visibleClubs = clubScope ? clubs.filter((club) => club.id === clubScope) : clubs;
+  const canRegisterClub = !role || role === "DEVELOPER";
+  const canEditClub = (clubId: string) =>
+    !role || role === "DEVELOPER" || (role === "SUPER_ADMIN" && clubId === clubScope);
+  const canDeleteClub = (clubId: string) => clubId !== DEFAULT_CLUB_ID && (!role || role === "DEVELOPER");
 
   if (!ready) return null;
 
@@ -36,10 +43,12 @@ export function ClubStart() {
       <p className="text-sm font-bold uppercase tracking-widest text-emerald-700">Club</p>
       <h1 className="mt-2 break-words text-[clamp(1.85rem,1.2rem+2.2vw,3.25rem)] font-black leading-[1.12] tracking-tight text-slate-950">{current ? current.name : "Load a club"}</h1>
       <p className="mt-4 max-w-xl text-lg leading-relaxed text-slate-700">
-        Choose a club to open. Players, teams, drills, attendance, and the colours stay with that club.
+        {clubScope
+          ? "This sign-in only shows your club. Sign out to register a club or open another one."
+          : "Choose a club to open. Players, teams, drills, attendance, and the colours stay with that club."}
       </p>
       <div className="mt-8 grid gap-4" data-club-list>
-        {clubs.map((club) => (
+        {visibleClubs.map((club) => (
           <article
             key={club.id}
             className="rounded-2xl bg-white p-5 ring-1 ring-slate-300 sm:p-6"
@@ -64,15 +73,17 @@ export function ClubStart() {
                 >
                   {club.id === activeId ? "Loaded" : "Load"}
                 </button>
-                <button
-                  type="button"
-                  data-edit-club={club.id}
-                  onClick={() => setEditingId(editingId === club.id ? null : club.id)}
-                  className="btn-quiet min-h-11 shrink-0 rounded-lg px-4 text-sm font-bold"
-                >
-                  Edit
-                </button>
-                {club.id === DEFAULT_CLUB_ID ? null : (
+                {canEditClub(club.id) ? (
+                  <button
+                    type="button"
+                    data-edit-club={club.id}
+                    onClick={() => setEditingId(editingId === club.id ? null : club.id)}
+                    className="btn-quiet min-h-11 shrink-0 rounded-lg px-4 text-sm font-bold"
+                  >
+                    Edit
+                  </button>
+                ) : null}
+                {canDeleteClub(club.id) ? (
                   <button
                     type="button"
                     data-delete-club={club.id}
@@ -84,7 +95,7 @@ export function ClubStart() {
                   >
                     Delete
                   </button>
-                )}
+                ) : null}
               </div>
             </div>
             {editingId === club.id ? (
@@ -131,7 +142,7 @@ export function ClubStart() {
       {current ? (
         <div>
           <h2 className="text-lg font-black text-slate-950">Open {current.name}</h2>
-          <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">Register players as club admin, then coach the squad.</p>
+          <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">Choose a role to open this club.</p>
           <div className="mt-4">
             <RolePicker />
           </div>
@@ -139,15 +150,17 @@ export function ClubStart() {
       ) : (
         <p className="text-base font-semibold text-slate-700">Load {CLUB_NAME}, or add a club, before you open a role.</p>
       )}
-      <section className="rounded-2xl bg-white p-5 ring-1 ring-slate-300 sm:p-6" aria-label="Add a club">
-        <h2 className="text-lg font-black text-slate-950">Add a club</h2>
-        <ClubForm
-          submitLabel="Add club"
-          onSubmit={(input) => {
-            void addClub(input);
-          }}
-        />
-      </section>
+      {canRegisterClub ? (
+        <section className="rounded-2xl bg-white p-5 ring-1 ring-slate-300 sm:p-6" aria-label="Add a club">
+          <h2 className="text-lg font-black text-slate-950">Add a club</h2>
+          <ClubForm
+            submitLabel="Add club"
+            onSubmit={(input) => {
+              void addClub(input);
+            }}
+          />
+        </section>
+      ) : null}
       </div>
     </div>
   );

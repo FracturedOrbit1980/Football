@@ -7,7 +7,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000 and choose Club admin, Head coach, or Player. The official drill library is included. The imported players start on U12 Prem, and each one can be edited. Other age groups start empty. Club records are saved in this browser.
+Open http://localhost:3000 and choose Developer, Club admin, Head coach, or Player. A developer sees every registered club and its balances; the other roles are scoped to the club that was open when they signed in. The official drill library is included. The imported players start on U12 Prem, and each one can be edited. Other age groups start empty. Club records are saved in this browser.
 
 The hosted app is https://fracturedorbit1980.github.io/Football/
 

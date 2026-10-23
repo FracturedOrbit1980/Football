@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 
+import { useRole } from "@/components/auth/role-session";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TeamPicker } from "@/components/coach/team-picker";
@@ -19,6 +20,8 @@ export function ClubOverview() {
   const clubs = useClubLibrary((state) => state.clubs);
   const activeId = useClubLibrary((state) => state.activeId);
   const load = useClubLibrary((state) => state.load);
+  const { role } = useRole();
+  const canSeeAllClubs = role === "DEVELOPER";
   const current = clubs.find((club) => club.id === activeId) ?? null;
   const teamCount = ageGroups.reduce((sum, group) => sum + group.teams.length, 0);
 
@@ -31,6 +34,7 @@ export function ClubOverview() {
 
   return (
     <div>
+      {canSeeAllClubs ? (
       <Card data-registered-clubs>
         <CardHeader>
           <CardTitle className="text-lg font-black text-slate-950">Registered clubs</CardTitle>
@@ -120,8 +124,9 @@ export function ClubOverview() {
           </ul>
         </CardContent>
       </Card>
-      <h2 className="mt-8 text-lg font-black text-slate-950">
-        Current club{current ? ` · ${current.name}` : ""}
+      ) : null}
+      <h2 className={`text-lg font-black text-slate-950 ${canSeeAllClubs ? "mt-8" : ""}`}>
+        {canSeeAllClubs ? "Current club" : "Your club"}{current ? ` · ${current.name}` : ""}
       </h2>
       <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((item) => (

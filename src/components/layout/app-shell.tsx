@@ -20,13 +20,16 @@ import { ROLE_HOME, ROLE_LABEL, type UserRole } from "@/lib/auth/roles";
 import { DEFAULT_CLUB_ID } from "@/lib/club/registry";
 import { activeClub, useClubLibrary } from "@/stores/club-library";
 
+const ADMIN_NAV: { href: string; label: string; icon: typeof Users }[] = [
+  { href: "/admin", label: "Club", icon: LayoutDashboard },
+  { href: "/admin/people", label: "People", icon: Users },
+  { href: "/admin/accounting", label: "Accounting", icon: Wallet },
+  { href: "/admin/drills", label: "Drills", icon: Library },
+];
+
 const NAV: Record<UserRole, { href: string; label: string; icon: typeof Users }[]> = {
-  SUPER_ADMIN: [
-    { href: "/admin", label: "Club", icon: LayoutDashboard },
-    { href: "/admin/people", label: "People", icon: Users },
-    { href: "/admin/accounting", label: "Accounting", icon: Wallet },
-    { href: "/admin/drills", label: "Drills", icon: Library },
-  ],
+  DEVELOPER: ADMIN_NAV,
+  SUPER_ADMIN: ADMIN_NAV,
   HEAD_COACH: [
     { href: "/coach", label: "Home", icon: LayoutDashboard },
     { href: "/coach/roster", label: "Squad", icon: Users },
