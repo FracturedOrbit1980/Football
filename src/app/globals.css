@@ -593,9 +593,29 @@ html.dark [data-club-active="true"] {
   box-shadow: 0 12px 32px rgb(0 0 0 / 0.22), 0 0 22px -6px rgb(var(--cs-glow-teal) / 0.5);
 }
 
-html.dark .recharts-radar-polygon,
-html.dark .recharts-line-curve {
+html.dark .recharts-radar-polygon {
   filter: drop-shadow(0 0 6px rgb(var(--cs-glow-teal) / 0.55));
+}
+
+/* Recharts paints its axis ink from SVG attributes, so the dark remap has to
+   happen here or the navy tick labels vanish on a glass card. */
+html.dark .recharts-wrapper text {
+  fill: #aeb9c7;
+}
+
+html.dark .recharts-polar-grid-angle line,
+html.dark .recharts-polar-grid-concentric path,
+html.dark .recharts-polar-grid-concentric circle,
+html.dark .recharts-polar-radius-axis line {
+  stroke: #26354d;
+}
+
+/* A dimmed button must not light up: html.dark .btn-shade would otherwise win
+   over the shared :disabled rule on specificity. */
+html.dark .btn-shade:disabled,
+html.dark .btn-quiet:disabled,
+html.dark .btn-danger:disabled {
+  box-shadow: none;
 }
 
 select.btn-quiet,
