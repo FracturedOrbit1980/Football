@@ -5,6 +5,12 @@ import { mergeLibraryBoards } from "@/lib/club/library-boards";
 import { clubLibrary } from "@/lib/club/library";
 import { placeOnU12Prem, playerId, SQUAD_TEAM_ID, U12_SQUAD } from "@/lib/club/roster";
 
+export interface PaymentRecord {
+  id: string;
+  date: string;
+  amount: number;
+}
+
 export interface ClubPlayer {
   id: string;
   name: string;
@@ -15,7 +21,10 @@ export interface ClubPlayer {
   homework: string;
   photo?: string;
   seasonFee: number;
-  feePaid: number;
+  feeDueDate: string;
+  payments: PaymentRecord[];
+  guardianName: string;
+  guardianEmail: string;
   accessPin: string;
 }
 
@@ -120,7 +129,10 @@ export function createSeed(): ClubData {
       homework: "",
       photo: "",
       seasonFee: 0,
-      feePaid: 0,
+      feeDueDate: "",
+      payments: [],
+      guardianName: "",
+      guardianEmail: "",
       accessPin: "",
     })),
   );

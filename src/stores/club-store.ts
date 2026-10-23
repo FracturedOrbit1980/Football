@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 import { ageNumber, ensureYouthAges, sortByAge } from "@/lib/club/age";
+import { isIsoDate, todayIso } from "@/lib/club/accounting";
 import { normalizePositions } from "@/lib/club/positions";
 import { canonicalDivision, canonicalTeamName, type Division, type DrillLevel, type DrillType, type MomentOfGame, type PlayerCount, type SetupDiagram } from "@/lib/club/catalog";
 import { isDrillLevel, isDrillType, isMoment, skillOf, withUefaDrills, youthAgeOf } from "@/lib/club/drill-record";
@@ -79,7 +80,12 @@ interface ClubState extends ClubData {
   updatePlayer: (playerId: string, input: { name: string; squadNumber: number; position: string; positions?: string[]; photo?: string }) => void;
   setPlayerPhoto: (playerId: string, photo: string) => void;
   assignPlayer: (playerId: string, teamId: string) => void;
-  setPlayerMoney: (playerId: string, seasonFee: number, feePaid: number) => void;
+  setPlayerAccount: (
+    playerId: string,
+    input: { seasonFee: number; feeDueDate: string; guardianName: string; guardianEmail: string },
+  ) => void;
+  recordPayment: (playerId: string, amount: number, date: string) => void;
+  removePayment: (playerId: string, paymentId: string) => void;
   setPlayerPin: (playerId: string, pin: string) => void;
   deletePlayer: (playerId: string) => void;
   addCoach: (teamId: string, name: string) => void;
@@ -123,10 +129,6 @@ interface ClubState extends ClubData {
 
 function todayLabel() {
   return new Date().toLocaleDateString("en-ZA", { day: "numeric", month: "short" });
-}
-
-function todayIso() {
-  return new Date().toISOString().slice(0, 10);
 }
 
 export const useClubStore = create<ClubState>()(
@@ -206,7 +208,10 @@ export const useClubStore = create<ClubState>()(
               homework: "",
               photo: input.photo ?? "",
               seasonFee: 0,
-              feePaid: 0,
+              feeDueDate: "",
+              payments: [],
+              guardianName: "",
+              guardianEmail: "",
               accessPin: "",
             },
           ],
@@ -233,7 +238,10 @@ export const useClubStore = create<ClubState>()(
               homework: "",
               photo: "",
               seasonFee: 0,
-              feePaid: 0,
+              feeDueDate: "",
+              payments: [],
+              guardianName: "",
+              guardianEmail: "",
               accessPin: "",
             });
             added += 1;
@@ -264,15 +272,40 @@ export const useClubStore = create<ClubState>()(
         set((state) => ({
           players: state.players.map((player) => (player.id === playerId ? { ...player, teamId } : player)),
         })),
-      setPlayerMoney: (playerId, seasonFee, feePaid) =>
+      setPlayerAccount: (playerId, input) =>
+        set((state) => ({
+          players: state.players.map((player) => {
+            if (player.id !== playerId) return player;
+            const seasonFee = Math.max(0, Math.round(Number.isFinite(input.seasonFee) ? input.seasonFee : 0));
+            return {
+              ...player,
+              seasonFee,
+              feeDueDate: isIsoDate(input.feeDueDate) ? input.feeDueDate : seasonFee > 0 ? todayIso() : "",
+              guardianName: input.guardianName.trim().slice(0, 80),
+              guardianEmail: input.guardianEmail.trim().slice(0, 120),
+            };
+          }),
+        })),
+      recordPayment: (playerId, amount, date) =>
+        set((state) => ({
+          players: state.players.map((player) => {
+            if (player.id !== playerId) return player;
+            const value = Math.max(0, Math.round(Number.isFinite(amount) ? amount : 0));
+            if (value === 0) return player;
+            return {
+              ...player,
+              payments: [
+                ...player.payments,
+                { id: `pay-${Date.now()}`, date: isIsoDate(date) ? date : todayIso(), amount: value },
+              ],
+            };
+          }),
+        })),
+      removePayment: (playerId, paymentId) =>
         set((state) => ({
           players: state.players.map((player) =>
             player.id === playerId
-              ? {
-                  ...player,
-                  seasonFee: Math.max(0, Math.round(Number.isFinite(seasonFee) ? seasonFee : 0)),
-                  feePaid: Math.max(0, Math.round(Number.isFinite(feePaid) ? feePaid : 0)),
-                }
+              ? { ...player, payments: player.payments.filter((payment) => payment.id !== paymentId) }
               : player,
           ),
         })),
@@ -576,8 +609,31 @@ export const useClubStore = create<ClubState>()(
           })),
         }));
         const players = (useSquad ? baseline.players : savedPlayers).map((player) => {
-          const next = { ...player } as typeof player & { dateOfBirth?: string };
+          const next = { ...player } as typeof player & { dateOfBirth?: string; feePaid?: number };
           delete next.dateOfBirth;
+          const legacyPaid =
+            typeof next.feePaid === "number" && Number.isFinite(next.feePaid)
+              ? Math.max(0, Math.round(next.feePaid))
+              : 0;
+          delete next.feePaid;
+          const payments = Array.isArray(player.payments)
+            ? player.payments
+                .filter((payment) => payment && Number.isFinite(payment.amount))
+                .map((payment, index) => ({
+                  id: typeof payment.id === "string" && payment.id ? payment.id : `pay-${index}`,
+                  date: isIsoDate(payment.date) ? payment.date : todayIso(),
+                  amount: Math.max(0, Math.round(payment.amount)),
+                }))
+                .filter((payment) => payment.amount > 0)
+            : legacyPaid > 0
+              ? [
+                  {
+                    id: "pay-legacy",
+                    date: isIsoDate(player.feeDueDate) ? player.feeDueDate : todayIso(),
+                    amount: legacyPaid,
+                  },
+                ]
+              : [];
           return {
             ...next,
             ...normalizePositions(player.position, player.positions),
@@ -586,10 +642,10 @@ export const useClubStore = create<ClubState>()(
               typeof player.seasonFee === "number" && Number.isFinite(player.seasonFee)
                 ? Math.max(0, Math.round(player.seasonFee))
                 : 0,
-            feePaid:
-              typeof player.feePaid === "number" && Number.isFinite(player.feePaid)
-                ? Math.max(0, Math.round(player.feePaid))
-                : 0,
+            feeDueDate: isIsoDate(player.feeDueDate) ? player.feeDueDate : "",
+            payments,
+            guardianName: typeof player.guardianName === "string" ? player.guardianName.slice(0, 80) : "",
+            guardianEmail: typeof player.guardianEmail === "string" ? player.guardianEmail.slice(0, 120) : "",
             accessPin:
               typeof player.accessPin === "string" ? player.accessPin.replace(/\D/g, "").slice(0, 4) : "",
           };
