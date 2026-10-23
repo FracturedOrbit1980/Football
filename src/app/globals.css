@@ -590,6 +590,12 @@ html.dark .club-mark {
     0 0 34px -4px rgb(var(--cs-glow-volt) / 0.55);
 }
 
+/* Club marks are navy-and-teal art on a white plate. Reusing .bg-white let the
+   dark-mode remap repaint that plate navy, which hid the navy half of the mark. */
+.logo-plate {
+  background-color: #ffffff;
+}
+
 html.dark [data-club-active="true"] {
   box-shadow: 0 12px 32px rgb(0 0 0 / 0.22), 0 0 22px -6px rgb(var(--cs-glow-teal) / 0.5);
 }

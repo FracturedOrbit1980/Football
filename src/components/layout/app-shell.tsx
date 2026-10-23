@@ -145,5 +145,5 @@ function ClubMark({ club }: { club: ReturnType<typeof activeClub> }) {
       </span>
     );
   }
-  return <img src={src} alt="" width={40} height={40} className="club-mark size-10 shrink-0 rounded-full bg-white object-contain" />;
+  return <img src={src} alt="" width={40} height={40} className="club-mark logo-plate size-10 shrink-0 rounded-full object-contain" />;
 }

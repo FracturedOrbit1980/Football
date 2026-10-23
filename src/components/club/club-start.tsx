@@ -199,7 +199,7 @@ function ClubForm({
           }}
         />
       </label>
-      {logo ? <img src={logo} alt="" className="size-16 rounded-full bg-white object-contain ring-1 ring-slate-300" /> : null}
+      {logo ? <img src={logo} alt="" className="logo-plate size-16 rounded-full object-contain ring-1 ring-slate-300" /> : null}
       <fieldset>
         <legend className="text-sm font-semibold text-slate-800">Colour</legend>
         <div className="mt-2 flex flex-wrap gap-2">
@@ -238,7 +238,7 @@ function ClubLogo({ club }: { club: ClubProfile }) {
       </span>
     );
   }
-  return <img src={src} alt="" className="size-12 shrink-0 rounded-full bg-white object-contain ring-1 ring-slate-300" />;
+  return <img src={src} alt="" className="logo-plate size-12 shrink-0 rounded-full object-contain ring-1 ring-slate-300" />;
 }
 
 function themeName(id: ClubThemeId) {
