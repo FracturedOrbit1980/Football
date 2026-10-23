@@ -59,13 +59,20 @@ export function AppShell({ children }: { children: ReactNode }) {
     useClubLibrary((state) => state.activeId),
   );
   const clubName = club?.name ?? "Load a club";
+  const defaultBrand = !club?.logo && club?.id === DEFAULT_CLUB_ID;
 
   return (
     <div className="min-h-full bg-slate-100 text-slate-950">
       <header className="app-chrome fixed inset-x-0 top-0 z-30 flex h-16 items-center justify-between gap-3 border-b border-white/10 px-4 md:hidden">
         <Link href="/" className="flex min-w-0 items-center gap-2 font-bold">
-          <ClubMark club={club} />
-          <span className="truncate">{clubName}</span>
+          {defaultBrand ? (
+            <BrandLockup className="h-7" />
+          ) : (
+            <>
+              <ClubMark club={club} />
+              <span className="truncate">{clubName}</span>
+            </>
+          )}
         </Link>
         <div className="flex shrink-0 items-center gap-2">
           <AppearanceToggle />
@@ -75,11 +82,20 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <aside className="app-chrome fixed inset-y-0 left-0 z-20 hidden w-64 flex-col md:flex">
         <Link href="/" className="flex items-center gap-3 px-5 py-5">
-          <ClubMark club={club} />
-          <span>
-            <span className="block text-sm font-bold leading-tight">{clubName}</span>
-            <span className="text-xs font-medium text-emerald-300">Club platform</span>
-          </span>
+          {defaultBrand ? (
+            <span className="min-w-0">
+              <BrandLockup className="h-7" />
+              <span className="mt-1 block text-xs font-medium text-emerald-300">Club platform</span>
+            </span>
+          ) : (
+            <>
+              <ClubMark club={club} />
+              <span>
+                <span className="block text-sm font-bold leading-tight">{clubName}</span>
+                <span className="text-xs font-medium text-emerald-300">Club platform</span>
+              </span>
+            </>
+          )}
         </Link>
         <nav className="flex flex-1 flex-col gap-1 px-3">
           {items.map((item) => {
@@ -137,19 +153,12 @@ export function AppShell({ children }: { children: ReactNode }) {
   );
 }
 
-function ClubMark({ club }: { club: ReturnType<typeof activeClub> }) {
+function BrandLockup({ className }: { className: string }) {
   const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
-  if (!club?.logo && club?.id === DEFAULT_CLUB_ID) {
-    return (
-      <img
-        src={`${base}/icons/clubstride-symbol-dark.png`}
-        alt=""
-        width={40}
-        height={40}
-        className="club-mark size-10 shrink-0 rounded-full object-contain"
-      />
-    );
-  }
+  return <img src={`${base}/icons/clubstride-lockup-dark.svg`} alt="Clubstride" className={`w-auto ${className}`} />;
+}
+
+function ClubMark({ club }: { club: ReturnType<typeof activeClub> }) {
   const src = club?.logo || "";
   if (!src) {
     return (
