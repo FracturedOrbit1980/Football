@@ -139,7 +139,18 @@ export function AppShell({ children }: { children: ReactNode }) {
 
 function ClubMark({ club }: { club: ReturnType<typeof activeClub> }) {
   const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
-  const src = club?.logo || (club?.id === DEFAULT_CLUB_ID ? `${base}/icons/clubstride-symbol.png` : "");
+  if (!club?.logo && club?.id === DEFAULT_CLUB_ID) {
+    return (
+      <img
+        src={`${base}/icons/clubstride-symbol-dark.png`}
+        alt=""
+        width={40}
+        height={40}
+        className="club-mark size-10 shrink-0 rounded-full object-contain"
+      />
+    );
+  }
+  const src = club?.logo || "";
   if (!src) {
     return (
       <span className="club-mark grid size-10 shrink-0 place-items-center rounded-full bg-emerald-500 text-xs font-black text-white">

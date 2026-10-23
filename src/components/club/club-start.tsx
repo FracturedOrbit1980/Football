@@ -366,7 +366,23 @@ function ClubForm({
 
 function ClubLogo({ club }: { club: ClubProfile }) {
   const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
-  const src = club.logo || (club.id === DEFAULT_CLUB_ID ? `${base}/icons/clubstride-symbol.png` : "");
+  if (!club.logo && club.id === DEFAULT_CLUB_ID) {
+    return (
+      <>
+        <img
+          src={`${base}/icons/clubstride-symbol.png`}
+          alt=""
+          className="logo-plate size-12 shrink-0 rounded-full object-contain ring-1 ring-slate-300 dark:hidden"
+        />
+        <img
+          src={`${base}/icons/clubstride-symbol-dark.png`}
+          alt=""
+          className="hidden size-12 shrink-0 rounded-full object-contain dark:block"
+        />
+      </>
+    );
+  }
+  const src = club.logo || "";
   if (!src) {
     return (
       <span className="grid size-12 shrink-0 place-items-center rounded-full bg-emerald-600 text-sm font-black text-white">
