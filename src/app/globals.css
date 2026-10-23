@@ -586,8 +586,7 @@ html.dark .btn-chrome:focus-visible {
 }
 
 html.dark .club-mark {
-  box-shadow: 0 0 6px 0 rgb(var(--cs-glow-volt) / 0.6), 0 0 16px 1px rgb(var(--cs-glow-volt) / 0.7),
-    0 0 34px -4px rgb(var(--cs-glow-volt) / 0.55);
+  box-shadow: 0 0 9px -1px rgb(var(--cs-glow-volt) / 0.45), 0 0 20px -4px rgb(var(--cs-glow-volt) / 0.32);
 }
 
 /* Club marks are navy-and-teal art on a white plate. Reusing .bg-white let the
