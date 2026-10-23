@@ -108,8 +108,9 @@ export function AccountingBoard() {
           </label>
         </div>
         <p className="mt-3 text-sm font-medium text-slate-600">
-          Record the season fee, its due date, and every payment received. Club sponsorship is credited against the fee,
-          so outstanding is the fee less sponsorship less what was paid. Totals and the age analysis below cover{" "}
+          Each account lists its balance and ageing. Use Record payment to capture money received, Fee to set the season
+          fee, due date and guardian, and Statement to preview, print or email it. Club sponsorship is credited against
+          the fee, so outstanding is the fee less sponsorship less what was paid. Totals and the age analysis below cover{" "}
           {filterLabel}
           {query.trim() ? ` matching "${query.trim()}"` : ""}.
         </p>
@@ -215,12 +216,16 @@ function AccountRow({
   paymentLines: string[];
 }) {
   const setPlayerAccount = useClubStore((state) => state.setPlayerAccount);
+  const addCorrespondence = useClubStore((state) => state.addCorrespondence);
   const [fee, setFee] = useState(String(player.seasonFee));
   const [dueDate, setDueDate] = useState(player.feeDueDate);
   const [guardianName, setGuardianName] = useState(player.guardianName);
   const [guardianEmail, setGuardianEmail] = useState(player.guardianEmail);
-  const [open, setOpen] = useState(false);
+  const [panel, setPanel] = useState<"" | "fee" | "statement">("");
+  const [focusPayment, setFocusPayment] = useState(false);
   const [saved, setSaved] = useState("");
+  const [notice, setNotice] = useState("");
+  const [error, setError] = useState("");
   const feeValue = Math.max(0, Math.round(Number(fee) || 0));
   const paid = paidTotal(player);
   const preview: ClubPlayer = {
@@ -234,6 +239,31 @@ function AccountRow({
   const sponsored = sponsorCreditOf(player);
   const progress = planProgress(player);
   const promised = promiseStatus(player);
+  const context: StatementContext = {
+    clubName,
+    teamLabel,
+    guardian: guardianName || player.guardianName,
+    paymentLines,
+  };
+  const mailto = statementMailto(player, context);
+
+  function openPanel(next: "" | "fee" | "statement", payment = false) {
+    setPanel(next);
+    setFocusPayment(next === "statement" && payment);
+    setNotice("");
+    setError("");
+  }
+
+  function printQuick() {
+    if (printStatement(player, context)) {
+      addCorrespondence(player.id, "Print", `Statement printed for ${guardianName || player.guardianName || "the guardian"}.`);
+      setNotice("Statement printed and added to correspondence.");
+      setError("");
+    } else {
+      setError("Allow pop-ups to print the statement.");
+      setNotice("");
+    }
+  }
 
   return (
     <li className="rounded-xl bg-white p-4 ring-1 ring-slate-300" data-account={player.name}>
@@ -284,101 +314,166 @@ function AccountRow({
         </p>
       ) : null}
 
-      <form
-        className="mt-3 grid items-end gap-3 sm:grid-cols-2 lg:grid-cols-[repeat(4,minmax(0,1fr))_auto]"
-        onSubmit={(event) => {
-          event.preventDefault();
-          const nextDue = isIsoDate(dueDate) ? dueDate : feeValue > 0 ? todayIso() : "";
-          setPlayerAccount(player.id, { seasonFee: feeValue, feeDueDate: nextDue, guardianName, guardianEmail });
-          setDueDate(nextDue);
-          setSaved("Account details saved.");
-        }}
-      >
-        <label className="block text-sm font-semibold text-slate-800">
-          Season fee
-          <input
-            type="number"
-            min={0}
-            step={1}
-            inputMode="numeric"
-            value={fee}
-            data-field={`fee-${player.id}`}
-            onChange={(event) => {
-              setFee(event.target.value);
-              setSaved("");
-            }}
-            className="mt-1 block h-11 w-full rounded-md border border-slate-300 px-3 text-base tabular-nums"
-          />
-        </label>
-        <label className="block text-sm font-semibold text-slate-800">
-          Due date
-          <input
-            type="date"
-            value={dueDate}
-            data-field={`due-${player.id}`}
-            onChange={(event) => {
-              setDueDate(event.target.value);
-              setSaved("");
-            }}
-            className="mt-1 block h-11 w-full rounded-md border border-slate-300 px-3 text-base"
-          />
-        </label>
-        <label className="block text-sm font-semibold text-slate-800">
-          Guardian
-          <input
-            value={guardianName}
-            data-field={`guardian-${player.id}`}
-            placeholder="Guardian name"
-            onChange={(event) => {
-              setGuardianName(event.target.value);
-              setSaved("");
-            }}
-            className="mt-1 block h-11 w-full rounded-md border border-slate-300 px-3 text-base"
-          />
-        </label>
-        <label className="block text-sm font-semibold text-slate-800">
-          Guardian email
-          <input
-            type="email"
-            value={guardianEmail}
-            data-field={`guardian-email-${player.id}`}
-            placeholder="name@example.com"
-            onChange={(event) => {
-              setGuardianEmail(event.target.value);
-              setSaved("");
-            }}
-            className="mt-1 block h-11 w-full rounded-md border border-slate-300 px-3 text-base"
-          />
-        </label>
-        <Button type="submit" size="lg" className="h-11">
-          Save
+      <dl className="mt-3 flex flex-wrap items-baseline gap-x-6 gap-y-1 text-sm" data-account-money>
+        <div className="flex items-baseline gap-2">
+          <dt className="font-semibold text-slate-600">Billed</dt>
+          <dd className="tabular-nums font-black text-slate-950">{rand(chargedOf(preview))}</dd>
+        </div>
+        <div className="flex items-baseline gap-2">
+          <dt className="font-semibold text-slate-600">Received</dt>
+          <dd className="tabular-nums font-black text-slate-950">{rand(paid)}</dd>
+        </div>
+        <div className="flex items-baseline gap-2">
+          <dt className="font-semibold text-slate-600">Outstanding</dt>
+          <dd className="tabular-nums font-black text-slate-950">{rand(outstanding)}</dd>
+        </div>
+      </dl>
+
+      <div className="mt-3 flex flex-wrap gap-2" data-account-quick>
+        <Button type="button" size="lg" className="h-11" onClick={() => openPanel("statement", true)}>
+          Record payment
         </Button>
-      </form>
-
-      <div className="mt-2 flex flex-wrap items-center gap-x-6 gap-y-1 text-sm font-semibold text-slate-700">
-        <span>
-          Received <span className="tabular-nums text-slate-950">{rand(paid)}</span>
-        </span>
-        <span>
-          Outstanding <span className="tabular-nums text-slate-950">{rand(outstanding)}</span>
-        </span>
-        {saved ? <span className="text-emerald-800">{saved}</span> : null}
-      </div>
-
-      <div className="mt-3 border-t border-slate-200 pt-3">
         <Button
           type="button"
           size="lg"
           variant="outline"
           className="h-11"
-          aria-expanded={open}
-          onClick={() => setOpen((current) => !current)}
+          aria-expanded={panel === "fee"}
+          onClick={() => openPanel(panel === "fee" ? "" : "fee")}
         >
-          {open ? "Close statement" : "Statement and payments"}
+          {feeValue > 0 ? "Fee and guardian" : "Set fee"}
         </Button>
+        <Button
+          type="button"
+          size="lg"
+          variant="outline"
+          className="h-11"
+          aria-expanded={panel === "statement"}
+          onClick={() => openPanel(panel === "statement" ? "" : "statement")}
+        >
+          {panel === "statement" ? "Close statement" : "Statement"}
+        </Button>
+        <Button type="button" size="lg" variant="outline" className="h-11" onClick={printQuick}>
+          Print
+        </Button>
+        {mailto ? (
+          <Button asChild size="lg" variant="outline" className="h-11">
+            <a
+              href={mailto}
+              data-field={`quick-email-${player.id}`}
+              onClick={() => {
+                addCorrespondence(player.id, "Email", `Statement opened in the mail app for ${player.guardianEmail}.`);
+                setNotice("Mail app opened and the statement added to correspondence.");
+                setError("");
+              }}
+            >
+              Email
+            </a>
+          </Button>
+        ) : (
+          <Button
+            type="button"
+            size="lg"
+            variant="outline"
+            className="h-11"
+            onClick={() => {
+              openPanel("fee");
+              setError("Add the guardian's email, then save it to send a statement.");
+            }}
+          >
+            Email
+          </Button>
+        )}
       </div>
-      {open ? (
-        <StatementPanel player={player} clubName={clubName} teamLabel={teamLabel} guardianName={guardianName} paymentLines={paymentLines} />
+
+      {notice ? <p className="mt-2 text-sm font-semibold text-emerald-800" data-account-notice>{notice}</p> : null}
+      {error ? <p className="mt-2 text-sm font-semibold text-rose-700" data-account-error>{error}</p> : null}
+
+      {panel === "fee" ? (
+        <>
+          <form
+            className="mt-3 grid items-end gap-3 border-t border-slate-200 pt-3 sm:grid-cols-2 lg:grid-cols-[repeat(4,minmax(0,1fr))_auto]"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const nextDue = isIsoDate(dueDate) ? dueDate : feeValue > 0 ? todayIso() : "";
+              setPlayerAccount(player.id, { seasonFee: feeValue, feeDueDate: nextDue, guardianName, guardianEmail });
+              setDueDate(nextDue);
+              setSaved("Account details saved.");
+            }}
+          >
+            <label className="block text-sm font-semibold text-slate-800">
+              Season fee
+              <input
+                type="number"
+                min={0}
+                step={1}
+                inputMode="numeric"
+                value={fee}
+                data-field={`fee-${player.id}`}
+                onChange={(event) => {
+                  setFee(event.target.value);
+                  setSaved("");
+                }}
+                className="mt-1 block h-11 w-full rounded-md border border-slate-300 px-3 text-base tabular-nums"
+              />
+            </label>
+            <label className="block text-sm font-semibold text-slate-800">
+              Due date
+              <input
+                type="date"
+                value={dueDate}
+                data-field={`due-${player.id}`}
+                onChange={(event) => {
+                  setDueDate(event.target.value);
+                  setSaved("");
+                }}
+                className="mt-1 block h-11 w-full rounded-md border border-slate-300 px-3 text-base"
+              />
+            </label>
+            <label className="block text-sm font-semibold text-slate-800">
+              Guardian
+              <input
+                value={guardianName}
+                data-field={`guardian-${player.id}`}
+                placeholder="Guardian name"
+                onChange={(event) => {
+                  setGuardianName(event.target.value);
+                  setSaved("");
+                }}
+                className="mt-1 block h-11 w-full rounded-md border border-slate-300 px-3 text-base"
+              />
+            </label>
+            <label className="block text-sm font-semibold text-slate-800">
+              Guardian email
+              <input
+                type="email"
+                value={guardianEmail}
+                data-field={`guardian-email-${player.id}`}
+                placeholder="name@example.com"
+                onChange={(event) => {
+                  setGuardianEmail(event.target.value);
+                  setSaved("");
+                }}
+                className="mt-1 block h-11 w-full rounded-md border border-slate-300 px-3 text-base"
+              />
+            </label>
+            <Button type="submit" size="lg" className="h-11 sm:col-span-2 lg:col-span-1">
+              Save
+            </Button>
+          </form>
+          {saved ? <p className="mt-2 text-sm font-semibold text-emerald-800">{saved}</p> : null}
+        </>
+      ) : null}
+
+      {panel === "statement" ? (
+        <StatementPanel
+          player={player}
+          clubName={clubName}
+          teamLabel={teamLabel}
+          guardianName={guardianName}
+          paymentLines={paymentLines}
+          focusPayment={focusPayment}
+        />
       ) : null}
     </li>
   );
@@ -390,12 +485,14 @@ function StatementPanel({
   teamLabel,
   guardianName,
   paymentLines,
+  focusPayment,
 }: {
   player: ClubPlayer;
   clubName: string;
   teamLabel: string;
   guardianName: string;
   paymentLines: string[];
+  focusPayment: boolean;
 }) {
   const recordPayment = useClubStore((state) => state.recordPayment);
   const removePayment = useClubStore((state) => state.removePayment);
@@ -479,6 +576,7 @@ function StatementPanel({
               step={1}
               inputMode="numeric"
               value={amount}
+              autoFocus={focusPayment}
               data-field="payment-amount"
               onChange={(event) => {
                 setAmount(event.target.value);
