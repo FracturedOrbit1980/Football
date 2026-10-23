@@ -262,31 +262,23 @@ function PlayerDirectory({
 }) {
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState("");
-  const selected = players.find((player) => player.id === selectedId) ?? null;
   const labelOf = (player: ClubPlayer) => teamLabel(teams, player);
   const matches = searchPlayers(players, query, labelOf);
   const ordered = query.trim()
     ? matches
-    : [...matches].sort((a, b) => a.regNumber.localeCompare(b.regNumber) || a.name.localeCompare(b.name));
-
-  if (selected) {
-    return (
-      <PlayerRecord
-        key={selected.id}
-        player={selected}
-        teamLabel={teamLabel(teams, selected)}
-        onSave={onSave}
-        onClose={() => setSelectedId("")}
-      />
-    );
-  }
+    : [...matches].sort(
+        (a, b) =>
+          (a.surname || a.name).localeCompare(b.surname || b.name) ||
+          (a.firstName || "").localeCompare(b.firstName || "") ||
+          a.regNumber.localeCompare(b.regNumber),
+      );
 
   return (
     <section aria-label="Player records">
       <div className="rounded-xl bg-white p-4 ring-1 ring-slate-300">
         <h2 className="text-lg font-bold text-slate-950">Find a player</h2>
         <p className="mt-1 text-sm font-medium text-slate-600">
-          Search by reference, ID number, mobile number, first name or surname. Add another word to narrow the list, then open the record for account and correspondence history.
+          Search by reference, ID number, mobile number, first name or surname. Add another word to narrow the list. Open a player to see the record and correspondence history in place.
         </p>
         <label className="mt-3 block max-w-xl text-sm font-semibold text-slate-800">
           Search players
@@ -303,7 +295,7 @@ function PlayerDirectory({
         <p className="mt-2 text-sm font-semibold text-slate-700" data-search-count>
           {query.trim()
             ? `${ordered.length} of ${players.length} ${players.length === 1 ? "player matches" : "players match"} "${query.trim()}".`
-            : `${players.length} registered ${players.length === 1 ? "player" : "players"}. Choose one to open the full record.`}
+            : `${players.length} registered ${players.length === 1 ? "player" : "players"}. Choose one to open the record in place.`}
         </p>
       </div>
       {ordered.length === 0 ? (
@@ -312,28 +304,54 @@ function PlayerDirectory({
         </p>
       ) : (
         <ul className="mt-3 space-y-2" data-player-results>
-          {ordered.map((player) => (
-            <li key={player.id}>
-              <button
-                type="button"
-                data-player-result={player.regNumber}
-                onClick={() => setSelectedId(player.id)}
-                className="flex w-full flex-wrap items-center gap-3 rounded-xl bg-white p-3 text-left ring-1 ring-slate-300 transition-colors hover:ring-emerald-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <PlayerPortrait photo={player.photo} name={player.name} size="sm" />
-                <span className="min-w-0 flex-1 basis-48">
-                  <span className="block text-base font-bold text-slate-950">
-                    {player.regNumber} · {player.name}
+          {ordered.map((player) => {
+            const open = selectedId === player.id;
+            const outstanding = outstandingOf(player);
+            const credit = creditOf(player);
+            const balance = balanceChip(player, outstanding, credit);
+            return (
+              <li key={player.id}>
+                <button
+                  type="button"
+                  data-player-result={player.regNumber}
+                  aria-expanded={open}
+                  onClick={() => setSelectedId(open ? "" : player.id)}
+                  className={`flex w-full flex-wrap items-center gap-3 rounded-xl bg-white p-3 text-left ring-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                    open ? "ring-2 ring-emerald-600" : "ring-slate-300 hover:ring-emerald-600"
+                  }`}
+                >
+                  <PlayerPortrait photo={player.photo} name={player.name} size="sm" />
+                  <span className="min-w-0 flex-1 basis-44">
+                    <span className="block truncate text-base font-bold text-slate-950">{surnameFirst(player)}</span>
+                    <span className="block truncate text-sm font-medium text-slate-600">
+                      {player.idNumber ? `ID ${player.idNumber}` : "No ID captured"} · {player.mobile || "No mobile captured"}
+                    </span>
                   </span>
-                  <span className="block text-sm font-medium text-slate-600">
-                    {player.idNumber ? `ID ${player.idNumber}` : "No ID captured"} · {player.mobile || "No mobile captured"}
+                  <span className="w-28 shrink-0">
+                    <span className="block text-xs font-bold uppercase tracking-wide text-slate-600">Account</span>
+                    <span className="block text-sm font-bold tabular-nums text-slate-950">{player.regNumber}</span>
                   </span>
-                  <span className="block text-sm font-medium text-slate-600">{labelOf(player)}</span>
-                </span>
-                <span className="ml-auto shrink-0 text-sm font-bold text-emerald-700">Open record</span>
-              </button>
-            </li>
-          ))}
+                  <span className="w-32 shrink-0 sm:text-right">
+                    <span className="block text-xs font-bold uppercase tracking-wide text-slate-600">Outstanding</span>
+                    <span className="block text-sm font-black tabular-nums text-slate-950">{rand(outstanding)}</span>
+                    <span className={`mt-0.5 inline-block rounded-full px-2 py-0.5 text-xs font-bold ${balance.style}`}>{balance.label}</span>
+                  </span>
+                  <span className="ml-auto shrink-0 text-sm font-bold text-emerald-700 sm:ml-0">{open ? "Hide record" : "View record"}</span>
+                </button>
+                {open ? (
+                  <div className="mt-2">
+                    <PlayerRecord
+                      key={player.id}
+                      player={player}
+                      teamLabel={labelOf(player)}
+                      onSave={onSave}
+                      onClose={() => setSelectedId("")}
+                    />
+                  </div>
+                ) : null}
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>
@@ -362,47 +380,83 @@ function PlayerRecord({
   const [number, setNumber] = useState(player.squadNumber);
   const [role, setRole] = useState<PositionChoice>(stored.position);
   const [roles, setRoles] = useState<StandardPosition[]>(stored.positions);
+  const [editing, setEditing] = useState(false);
   const [saved, setSaved] = useState("");
   const [error, setError] = useState("");
   const [channel, setChannel] = useState<CorrespondenceChannel>("Note");
   const [note, setNote] = useState("");
   const [historyNotice, setHistoryNotice] = useState("");
+  const [historyError, setHistoryError] = useState("");
   const paid = paidTotal(player);
   const outstanding = outstandingOf(player);
   const credit = creditOf(player);
-  const status =
-    player.seasonFee <= 0 ? "No fee set" : outstanding <= 0 ? "Paid" : paid > 0 ? "Part paid" : "Awaiting payment";
 
   return (
-    <section className="rounded-xl bg-white p-4 ring-1 ring-slate-300" data-player-record={player.regNumber}>
+    <section className="rounded-xl bg-white p-3 ring-1 ring-slate-300" data-player-record={player.regNumber}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
-          <PlayerPortrait photo={player.photo} name={player.name} size="md" />
+          <PlayerPortrait photo={player.photo} name={player.name} size="sm" />
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">{player.regNumber}</p>
-            <h2 className="break-words text-xl font-black text-slate-950">{player.name}</h2>
+            <h2 className="break-words text-lg font-black text-slate-950">{surnameFirst(player)}</h2>
             <p className="text-sm font-medium text-slate-600">{teamLabel}</p>
           </div>
         </div>
-        <Button type="button" size="lg" variant="outline" className="h-11" onClick={onClose} data-field="close-player-record">
-          Back to search
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            size="lg"
+            variant="outline"
+            className="h-11"
+            aria-expanded={editing}
+            onClick={() => setEditing((open) => !open)}
+            data-field="edit-player-details"
+          >
+            {editing ? "Done editing" : "Edit details"}
+          </Button>
+          <Button type="button" size="lg" variant="outline" className="h-11" onClick={onClose} data-field="close-player-record">
+            Close record
+          </Button>
+        </div>
       </div>
 
-      <dl className="mt-4 grid gap-3 rounded-lg bg-slate-100 p-3 sm:grid-cols-2 lg:grid-cols-4" data-player-identity>
-        <Detail label="Registration" value={player.regNumber} />
-        <Detail label="First name" value={player.firstName || "Not captured"} />
-        <Detail label="Surname" value={player.surname || "Not captured"} />
-        <Detail label="ID number" value={player.idNumber || "Not captured"} />
-        <Detail label="Mobile" value={player.mobile || "Not captured"} />
-        <Detail label="Squad number" value={String(player.squadNumber)} />
-        <Detail label="Position" value={formatPosition(player)} />
-        <Detail label="Account" value={status} />
-      </dl>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <dl className="grid grid-cols-2 gap-2 rounded-lg bg-slate-100 p-3" data-player-identity>
+          <Detail label="ID number" value={player.idNumber || "Not captured"} />
+          <Detail label="Mobile" value={player.mobile || "Not captured"} />
+          <Detail label="Squad number" value={String(player.squadNumber)} />
+          <Detail label="Position" value={formatPosition(player)} />
+        </dl>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <div className="rounded-lg bg-slate-100 p-3">
+          <h3 className="text-sm font-bold uppercase tracking-wide text-slate-700">Account</h3>
+          <dl className="mt-2 grid gap-2 text-sm" data-player-account>
+            <div className="flex justify-between gap-3">
+              <dt className="font-medium text-slate-700">Season fee</dt>
+              <dd className="tabular-nums font-bold text-slate-950">{rand(player.seasonFee)}</dd>
+            </div>
+            <div className="flex justify-between gap-3">
+              <dt className="font-medium text-slate-700">Received</dt>
+              <dd className="tabular-nums font-bold text-slate-950">{rand(paid)}</dd>
+            </div>
+            <div className="flex justify-between gap-3 border-t border-slate-300 pt-2">
+              <dt className="font-bold text-slate-900">{credit > 0 ? "In credit" : "Outstanding"}</dt>
+              <dd className="tabular-nums font-black text-slate-950">{rand(credit > 0 ? credit : outstanding)}</dd>
+            </div>
+            {player.feeDueDate ? (
+              <div className="flex justify-between gap-3">
+                <dt className="font-medium text-slate-700">Fee due</dt>
+                <dd className="font-semibold text-slate-900">{formatDay(player.feeDueDate)}</dd>
+              </div>
+            ) : null}
+          </dl>
+          <p className="mt-2 text-sm font-medium text-slate-600">Fees, payments and guardian statements are managed on Accounting.</p>
+        </div>
+      </div>
+
+      {editing ? (
         <form
-          className="space-y-3 rounded-lg bg-slate-100 p-3"
+          className="mt-3 space-y-3 rounded-lg bg-slate-100 p-3"
           onSubmit={(event) => {
             event.preventDefault();
             setSaved("");
@@ -429,7 +483,7 @@ function PlayerRecord({
             setSaved(`Saved ${name}.`);
           }}
         >
-          <h3 className="text-sm font-bold uppercase tracking-wide text-slate-700">Player details</h3>
+          <h3 className="text-sm font-bold uppercase tracking-wide text-slate-700">Edit player details</h3>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="text-sm font-semibold text-slate-800">
               First name
@@ -508,36 +562,9 @@ function PlayerRecord({
             {error ? <p className="text-sm font-semibold text-rose-700" data-record-error>{error}</p> : null}
           </div>
         </form>
+      ) : null}
 
-        <div className="rounded-lg bg-slate-100 p-3">
-          <h3 className="text-sm font-bold uppercase tracking-wide text-slate-700">Account</h3>
-          <dl className="mt-2 grid gap-2 text-sm" data-player-account>
-            <div className="flex justify-between gap-3">
-              <dt className="font-medium text-slate-700">Season fee</dt>
-              <dd className="tabular-nums font-bold text-slate-950">{rand(player.seasonFee)}</dd>
-            </div>
-            <div className="flex justify-between gap-3">
-              <dt className="font-medium text-slate-700">Received</dt>
-              <dd className="tabular-nums font-bold text-slate-950">{rand(paid)}</dd>
-            </div>
-            <div className="flex justify-between gap-3 border-t border-slate-300 pt-2">
-              <dt className="font-bold text-slate-900">{credit > 0 ? "In credit" : "Outstanding"}</dt>
-              <dd className="tabular-nums font-black text-slate-950">{rand(credit > 0 ? credit : outstanding)}</dd>
-            </div>
-            {player.feeDueDate ? (
-              <div className="flex justify-between gap-3">
-                <dt className="font-medium text-slate-700">Fee due</dt>
-                <dd className="font-semibold text-slate-900">{formatDay(player.feeDueDate)}</dd>
-              </div>
-            ) : null}
-          </dl>
-          <p className="mt-3 text-sm font-medium text-slate-600">
-            Manage fees, payments and guardian statements on Accounting. Statements sent from there appear below.
-          </p>
-        </div>
-      </div>
-
-      <div className="mt-4 border-t border-slate-200 pt-3">
+      <div className="mt-3 border-t border-slate-200 pt-3">
         <h3 className="text-sm font-bold uppercase tracking-wide text-slate-700">
           Correspondence history
           <span className="ml-2 font-semibold text-slate-500">{player.correspondence.length}</span>
@@ -550,9 +577,10 @@ function PlayerRecord({
           onSubmit={(event) => {
             event.preventDefault();
             setHistoryNotice("");
+            setHistoryError("");
             const text = note.trim();
             if (!text) {
-              setError("Write what was discussed or sent before adding it.");
+              setHistoryError("Write what was discussed or sent before adding it.");
               return;
             }
             addCorrespondence(player.id, channel, text);
@@ -590,6 +618,7 @@ function PlayerRecord({
           </Button>
         </form>
         {historyNotice ? <p className="mt-2 text-sm font-semibold text-emerald-800" data-correspondence-notice>{historyNotice}</p> : null}
+        {historyError ? <p className="mt-2 text-sm font-semibold text-rose-700" data-correspondence-error>{historyError}</p> : null}
         {player.correspondence.length === 0 ? (
           <p className="mt-3 rounded-lg bg-white px-4 py-3 text-sm font-medium text-slate-600 ring-1 ring-slate-300">
             No correspondence yet.
@@ -624,4 +653,16 @@ function Detail({ label, value }: { label: string; value: string }) {
 function teamLabel(teams: TeamOption[], player: ClubPlayer) {
   const team = teams.find((item) => item.id === player.teamId);
   return team ? `${team.ageGroup} · ${team.division ?? team.name}` : "Waiting for a coach to allocate this player";
+}
+
+function surnameFirst(player: ClubPlayer) {
+  if (!player.surname) return player.name;
+  return player.firstName ? `${player.surname}, ${player.firstName}` : player.surname;
+}
+
+function balanceChip(player: ClubPlayer, outstanding: number, credit: number): { label: string; style: string } {
+  if (player.seasonFee <= 0) return { label: "No fee", style: "bg-slate-100 text-slate-700" };
+  if (outstanding > 0) return { label: "Due", style: "bg-rose-100 text-rose-900" };
+  if (credit > 0) return { label: "In credit", style: "bg-emerald-100 text-emerald-900" };
+  return { label: "Settled", style: "bg-emerald-100 text-emerald-900" };
 }
