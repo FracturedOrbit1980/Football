@@ -7,8 +7,8 @@ export default function PeoplePage() {
   return (
     <div>
       <PageHeader
-        title="Register and allocate"
-        description="Register players first. Then put each one on a team and league. Positions stay editable, and a player can move to another team."
+        title="Registration"
+        description="Register every player and keep their details correct. The head coach allocates them to a team and league, then manages ratings and attendance."
       />
       <PeopleBoard />
     </div>

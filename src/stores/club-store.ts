@@ -79,6 +79,8 @@ interface ClubState extends ClubData {
   updatePlayer: (playerId: string, input: { name: string; squadNumber: number; position: string; positions?: string[]; photo?: string }) => void;
   setPlayerPhoto: (playerId: string, photo: string) => void;
   assignPlayer: (playerId: string, teamId: string) => void;
+  setPlayerMoney: (playerId: string, seasonFee: number, feePaid: number) => void;
+  setPlayerPin: (playerId: string, pin: string) => void;
   deletePlayer: (playerId: string) => void;
   addCoach: (teamId: string, name: string) => void;
   addEvaluation: (input: NewEvaluationInput) => void;
@@ -203,42 +205,41 @@ export const useClubStore = create<ClubState>()(
               teamId: input.teamId,
               homework: "",
               photo: input.photo ?? "",
+              seasonFee: 0,
+              feePaid: 0,
+              accessPin: "",
             },
           ],
         })),
       importPlayers: (rows) => {
-        const state = get();
-        const placed = placeOnU12Prem(ensureYouthAges(state.ageGroups), state.players);
-        const players = [...placed.players];
+        const players = [...get().players];
         let added = 0;
         let updated = 0;
         for (const row of rows) {
           const name = row.name.trim().replace(/\s+/g, " ");
           const index = players.findIndex((player) => player.name.trim().toLowerCase() === name.toLowerCase());
           if (index >= 0) {
-            players[index] = {
-              ...players[index],
-              name,
-              squadNumber: row.squadNumber,
-              teamId: placed.teamId,
-            };
+            players[index] = { ...players[index], name, squadNumber: row.squadNumber };
             updated += 1;
           } else {
             const id = playerId(name);
             players.push({
-              id: players.some((player) => player.id === id) ? `${id}-${placed.teamId}` : id,
+              id: players.some((player) => player.id === id) ? `${id}-${Date.now()}` : id,
               name,
               squadNumber: row.squadNumber,
               position: "Central midfielder",
               positions: [],
-              teamId: placed.teamId,
+              teamId: "",
               homework: "",
               photo: "",
+              seasonFee: 0,
+              feePaid: 0,
+              accessPin: "",
             });
             added += 1;
           }
         }
-        set({ ageGroups: placed.ageGroups, players, coachTeamId: placed.teamId });
+        set({ players });
         return { added, updated };
       },
       updatePlayer: (playerId, input) =>
@@ -262,6 +263,26 @@ export const useClubStore = create<ClubState>()(
       assignPlayer: (playerId, teamId) =>
         set((state) => ({
           players: state.players.map((player) => (player.id === playerId ? { ...player, teamId } : player)),
+        })),
+      setPlayerMoney: (playerId, seasonFee, feePaid) =>
+        set((state) => ({
+          players: state.players.map((player) =>
+            player.id === playerId
+              ? {
+                  ...player,
+                  seasonFee: Math.max(0, Math.round(Number.isFinite(seasonFee) ? seasonFee : 0)),
+                  feePaid: Math.max(0, Math.round(Number.isFinite(feePaid) ? feePaid : 0)),
+                }
+              : player,
+          ),
+        })),
+      setPlayerPin: (playerId, pin) =>
+        set((state) => ({
+          players: state.players.map((player) =>
+            player.id === playerId
+              ? { ...player, accessPin: pin.replace(/\D/g, "").slice(0, 4) }
+              : player,
+          ),
         })),
       deletePlayer: (playerId) =>
         set((state) => ({
@@ -561,6 +582,16 @@ export const useClubStore = create<ClubState>()(
             ...next,
             ...normalizePositions(player.position, player.positions),
             photo: typeof player.photo === "string" ? player.photo : "",
+            seasonFee:
+              typeof player.seasonFee === "number" && Number.isFinite(player.seasonFee)
+                ? Math.max(0, Math.round(player.seasonFee))
+                : 0,
+            feePaid:
+              typeof player.feePaid === "number" && Number.isFinite(player.feePaid)
+                ? Math.max(0, Math.round(player.feePaid))
+                : 0,
+            accessPin:
+              typeof player.accessPin === "string" ? player.accessPin.replace(/\D/g, "").slice(0, 4) : "",
           };
         });
         const placed = placeOnU12Prem(ageGroups, players);

@@ -8,7 +8,7 @@ export default function RosterPage() {
     <div>
       <PageHeader
         title="Squad"
-        description="The squad is a short list. Tap a player to open their rating, details, and training week."
+        description="Allocate registered players to your team, set positions, save ratings and attendance, and protect each profile with a PIN."
       />
       <RosterBoard />
     </div>

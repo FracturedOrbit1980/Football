@@ -7,6 +7,7 @@ import {
   Pencil,
   Timer,
   Users,
+  Wallet,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -23,6 +24,7 @@ const NAV: Record<UserRole, { href: string; label: string; icon: typeof Users }[
   SUPER_ADMIN: [
     { href: "/admin", label: "Club", icon: LayoutDashboard },
     { href: "/admin/people", label: "People", icon: Users },
+    { href: "/admin/accounting", label: "Accounting", icon: Wallet },
     { href: "/admin/drills", label: "Drills", icon: Library },
   ],
   HEAD_COACH: [

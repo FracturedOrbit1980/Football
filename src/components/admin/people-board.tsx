@@ -2,12 +2,11 @@
 
 import { useState } from "react";
 
+import { PlayerUpload } from "@/components/admin/player-upload";
 import { Button } from "@/components/ui/button";
 import { PlayerPhotoField, PlayerPortrait } from "@/components/club/player-photo";
 import { PositionFields } from "@/components/club/position-fields";
-import { TeamPicker } from "@/components/coach/team-picker";
 import { ageLabel, ensureYouthAges } from "@/lib/club/age";
-import { DIVISIONS, isDivision } from "@/lib/club/catalog";
 import { formatPosition, normalizePositions, type PositionChoice, type StandardPosition } from "@/lib/club/positions";
 import type { ClubPlayer } from "@/lib/club/seed";
 import { useClubStore } from "@/stores/club-store";
@@ -17,7 +16,6 @@ export function PeopleBoard() {
   const players = useClubStore((state) => state.players);
   const addPlayer = useClubStore((state) => state.addPlayer);
   const updatePlayer = useClubStore((state) => state.updatePlayer);
-  const assignPlayer = useClubStore((state) => state.assignPlayer);
   const addCoach = useClubStore((state) => state.addCoach);
   const coaches = useClubStore((state) => state.coaches);
   const teams = ageGroups.flatMap((group) =>
@@ -29,41 +27,31 @@ export function PeopleBoard() {
   return (
     <div className="space-y-6">
       <ol className="grid gap-3 md:grid-cols-3">
-        <Step n="1" title="Register" detail="Add each player and set a position. A team is not required yet." />
-        <Step n="2" title="Allocate" detail="Put the player on an age group and league, or move them to another." />
-        <Step n="3" title="Coach" detail="Drills and the attendance register run for that team after allocation." />
+        <Step n="1" title="Register" detail="Add each player with a number, starting position, and photo. A team is not required yet." />
+        <Step n="2" title="Account" detail="Set the season fee and record payments on Accounting." />
+        <Step n="3" title="Coach" detail="The head coach allocates the player to a team and league, then runs ratings and attendance." />
       </ol>
       <RegisterForm
         onSave={(input) => {
           addPlayer(input);
         }}
       />
+      <PlayerUpload />
       <PlayerList
-        title="Waiting to be allocated"
-        empty="Registered players who are not on a team yet appear here."
+        title="Waiting for a coach"
+        empty="Registered players who are not on a team yet appear here. Your head coach allocates them onto a team."
         players={waiting}
         teams={teams}
         onSave={updatePlayer}
-        onAssign={assignPlayer}
       />
       <PlayerList
         title="On a team"
-        empty="Allocate a registered player to see them with their team and league."
+        empty="Players appear here once the head coach has allocated them."
         players={placed}
         teams={teams}
         onSave={updatePlayer}
-        onAssign={assignPlayer}
       />
       <CoachAssign teams={teams} coaches={coaches} onAssign={addCoach} />
-      <section className="rounded-xl bg-white p-4 ring-1 ring-slate-300">
-        <h2 className="text-lg font-bold text-slate-950">Open a team</h2>
-        <p className="mt-1 text-sm font-medium text-slate-600">
-          After players are allocated, tap an age, then Prem, Div 1, Div 2, Div 3, or Div 4. That is the team the coach opens.
-        </p>
-        <div className="mt-3">
-          <TeamPicker />
-        </div>
-      </section>
     </div>
   );
 }
@@ -92,7 +80,7 @@ function CoachAssign({
     >
       <div className="sm:col-span-2">
         <h2 className="text-lg font-bold text-slate-950">Coach for the team</h2>
-        <p className="mt-1 text-sm font-medium text-slate-600">The named coach runs drills and attendance after players are allocated.</p>
+        <p className="mt-1 text-sm font-medium text-slate-600">The named coach allocates players from the list above and runs drills and attendance.</p>
       </div>
       <label className="block text-sm font-semibold text-slate-800">
         Coach
@@ -158,7 +146,7 @@ function RegisterForm({
     >
       <div className="sm:col-span-2">
         <h2 className="text-lg font-bold text-slate-950">Register a player</h2>
-        <p className="mt-1 text-sm font-medium text-slate-600">Add another after this one. Positions stay editable.</p>
+        <p className="mt-1 text-sm font-medium text-slate-600">Add another after this one. The head coach can change the position or team later.</p>
       </div>
       <label className="text-sm font-semibold text-slate-800">
         Name
@@ -185,6 +173,7 @@ function RegisterForm({
         <PlayerPhotoField photo={photo} name={name} field="register-photo" onPhoto={setPhoto} />
       </div>
       <div className="sm:col-span-2">
+        <p className="mb-1 text-sm font-semibold text-slate-800">Starting position</p>
         <PositionFields
           role={role}
           roles={roles}
@@ -209,14 +198,12 @@ function PlayerList({
   players,
   teams,
   onSave,
-  onAssign,
 }: {
   title: string;
   empty: string;
   players: ClubPlayer[];
   teams: { id: string; ageGroup: string; division?: string; name: string }[];
   onSave: (playerId: string, input: { name: string; squadNumber: number; position: string; positions?: string[]; photo?: string }) => void;
-  onAssign: (playerId: string, teamId: string) => void;
 }) {
   return (
     <section>
@@ -232,7 +219,7 @@ function PlayerList({
             .slice()
             .sort((a, b) => a.squadNumber - b.squadNumber || a.name.localeCompare(b.name))
             .map((player) => (
-              <PlayerRow key={player.id} player={player} teams={teams} onSave={onSave} onAssign={onAssign} />
+              <PlayerRow key={player.id} player={player} teams={teams} onSave={onSave} />
             ))}
         </ul>
       )}
@@ -240,71 +227,14 @@ function PlayerList({
   );
 }
 
-function AllocateFields({ onAssign }: { onAssign: (teamId: string) => void }) {
-  const ageGroups = ensureYouthAges(useClubStore((state) => state.ageGroups));
-  const openDivisionTeam = useClubStore((state) => state.openDivisionTeam);
-  const [ageId, setAgeId] = useState("");
-  const selected = ageGroups.find((group) => group.id === ageId) ?? null;
-
-  return (
-    <div className="mt-3">
-      <p className="text-sm font-semibold text-slate-800">Age group</p>
-      <div className="mt-3 flex flex-wrap gap-3">
-        {ageGroups.map((group) => {
-          const label = ageLabel(group.name);
-          const active = group.id === selected?.id;
-          return (
-            <button
-              key={group.id}
-              type="button"
-              data-age-tile={label}
-              aria-pressed={active}
-              onClick={() => setAgeId(group.id)}
-              className={`min-h-12 min-w-16 rounded-xl px-4 text-base font-black ${active ? "btn-shade" : "btn-quiet"}`}
-            >
-              {label}
-            </button>
-          );
-        })}
-      </div>
-      {selected ? (
-        <label className="mt-3 block text-sm font-semibold text-slate-800">
-          Division
-          <select
-            value=""
-            data-field="allocate"
-            onChange={(event) => {
-              if (!isDivision(event.target.value)) return;
-              const teamId = openDivisionTeam(selected.id, event.target.value);
-              if (teamId) onAssign(teamId);
-            }}
-            className="btn-quiet mt-1 block h-11 w-full max-w-xs rounded-md px-3 text-base font-bold"
-          >
-            <option value="">Choose a division</option>
-            {DIVISIONS.map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
-          </select>
-        </label>
-      ) : (
-        <p className="mt-2 text-sm font-medium text-slate-600">Tap an age group, then choose Prem, Div 1, Div 2, Div 3, or Div 4.</p>
-      )}
-    </div>
-  );
-}
-
 function PlayerRow({
   player,
   teams,
   onSave,
-  onAssign,
 }: {
   player: ClubPlayer;
   teams: { id: string; ageGroup: string; division?: string; name: string }[];
   onSave: (playerId: string, input: { name: string; squadNumber: number; position: string; positions?: string[]; photo?: string }) => void;
-  onAssign: (playerId: string, teamId: string) => void;
 }) {
   const setPlayerPhoto = useClubStore((state) => state.setPlayerPhoto);
   const [open, setOpen] = useState(false);
@@ -326,7 +256,7 @@ function PlayerRow({
           </p>
           <p className="text-sm font-medium text-slate-600">{formatPosition(player)}</p>
           <p className="text-sm font-medium text-slate-600">
-            {teamLabel ? `${teamLabel.ageGroup} · ${teamLabel.division ?? teamLabel.name}` : "Not on a team yet"}
+            {teamLabel ? `${teamLabel.ageGroup} · ${teamLabel.division ?? teamLabel.name}` : "Waiting for a coach to allocate this player"}
           </p>
           </div>
         </div>
@@ -339,26 +269,6 @@ function PlayerRow({
           <span className="mt-0.5 block text-xs font-medium text-slate-600">Change the name, number, or position.</span>
         </button>
       </div>
-      {player.teamId ? (
-        <label className="mt-3 block text-sm font-semibold text-slate-800">
-          Team and league
-          <select
-            value={player.teamId}
-            data-field="allocate"
-            onChange={(event) => onAssign(player.id, event.target.value)}
-            className="mt-1 block h-11 w-full max-w-md rounded-md border border-slate-300 bg-white px-3 text-base"
-          >
-            <option value="">Not on a team yet</option>
-            {teams.map((team) => (
-              <option key={team.id} value={team.id}>
-                {team.ageGroup} · {team.division ?? team.name}
-              </option>
-            ))}
-          </select>
-        </label>
-      ) : (
-        <AllocateFields onAssign={(nextTeamId) => onAssign(player.id, nextTeamId)} />
-      )}
       {open ? (
         <form
           className="mt-3 space-y-3 border-t border-slate-200 pt-3"

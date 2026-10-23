@@ -6,7 +6,6 @@ import { PlayerPhotoField, PlayerPortrait } from "@/components/club/player-photo
 import { PositionFields } from "@/components/club/position-fields";
 import { Button } from "@/components/ui/button";
 import { useCoachTeam } from "@/components/coach/team-picker";
-import { PlayerUpload } from "@/components/coach/player-upload";
 import { formatPosition, normalizePositions, type PositionChoice, type StandardPosition } from "@/lib/club/positions";
 import type { ClubPlayer } from "@/lib/club/seed";
 import { addDays, formatDay, mondayOf, sessionToday, weekDates } from "@/lib/club/week";
@@ -36,7 +35,10 @@ export function RosterBoard() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const updatePlayer = useClubStore((state) => state.updatePlayer);
   const setPlayerPhoto = useClubStore((state) => state.setPlayerPhoto);
+  const setPlayerPin = useClubStore((state) => state.setPlayerPin);
   const deletePlayer = useClubStore((state) => state.deletePlayer);
+  const [pin, setPinValue] = useState(selected?.accessPin ?? "");
+  const [pinNotice, setPinNotice] = useState("");
   const [weekStart, setWeekStart] = useState(() => mondayOf(sessionToday()));
   const dates = weekDates(weekStart);
   const loadedId = useRef(selected?.id ?? "");
@@ -48,6 +50,8 @@ export function RosterBoard() {
     setEditRole(nextPosition.position);
     setEditRoles(nextPosition.positions);
     setHomeworkText(selected?.homework ?? "");
+    setPinValue(selected?.accessPin ?? "");
+    setPinNotice("");
     setConfirmDelete(false);
   }
 
@@ -60,6 +64,8 @@ export function RosterBoard() {
     setEditNumber(player?.squadNumber ?? 1);
     setEditRole(nextPosition.position);
     setEditRoles(nextPosition.positions);
+    setPinValue(player?.accessPin ?? "");
+    setPinNotice("");
     setConfirmDelete(false);
     setSaved("");
   }
@@ -70,7 +76,7 @@ export function RosterBoard() {
         <p className="rounded-lg bg-white px-4 py-3 font-semibold text-slate-800 ring-1 ring-slate-300">
           {team
             ? squad.length === 0
-              ? `${team.ageGroup} · ${team.division ?? team.name} has no players yet. Register them, then allocate them to this team.`
+              ? `${team.ageGroup} · ${team.division ?? team.name} has no players yet. Allocate a registered player below.`
               : `${squad.length} players. Tap one to open their rating, details, and training week.`
             : "Open an age and a league on Home. Attendance starts after players are allocated."}
         </p>
@@ -98,8 +104,12 @@ export function RosterBoard() {
         ) : null}
         {team ? <GameDay teamId={team.id} teamName={team.name} gameDay={team.gameDay} /> : null}
         {team ? <ExportSquad teamName={team.name} players={squad} /> : null}
-        {team ? <PlayerUpload /> : null}
-        {team ? <AddSquadPlayer teamId={team.id} /> : null}
+        {team ? (
+          <AllocatePlayers
+            teamId={team.id}
+            teamLabel={`${team.ageGroup} · ${team.division ?? team.name}`}
+          />
+        ) : null}
       </div>
     );
   }
@@ -232,6 +242,62 @@ export function RosterBoard() {
           <Button type="submit" size="lg" className="h-11 w-full">
             Save changes
           </Button>
+        </form>
+        <form
+          className="space-y-3 rounded-xl bg-white p-4 ring-1 ring-slate-300"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!/^\d{4}$/.test(pin)) {
+              setPinNotice("Use exactly 4 digits, or press Remove PIN.");
+              return;
+            }
+            setPlayerPin(selected.id, pin);
+            setPinNotice("PIN saved. The player needs it to open this profile.");
+          }}
+        >
+          <h3 className="text-sm font-bold uppercase tracking-wide text-slate-700">Profile PIN</h3>
+          <p className="text-sm font-medium text-slate-700">
+            A 4-digit PIN keeps {selected.name}&apos;s ratings and feedback private from the rest of the squad.
+          </p>
+          <label className="block text-sm font-semibold text-slate-800">
+            PIN
+            <input
+              type="password"
+              inputMode="numeric"
+              autoComplete="off"
+              maxLength={4}
+              value={pin}
+              data-field="profile-pin"
+              placeholder="4 digits"
+              onChange={(event) => {
+                setPinValue(event.target.value.replace(/\D/g, "").slice(0, 4));
+                setPinNotice("");
+              }}
+              className="mt-1 block h-11 w-40 rounded-md border border-slate-300 px-3 text-base tracking-[0.4em]"
+            />
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <Button type="submit" size="lg" className="h-11">
+              Save PIN
+            </Button>
+            <Button
+              type="button"
+              size="lg"
+              variant="outline"
+              className="h-11"
+              onClick={() => {
+                setPlayerPin(selected.id, "");
+                setPinValue("");
+                setPinNotice("PIN removed. Anyone on the device can open this profile.");
+              }}
+            >
+              Remove PIN
+            </Button>
+          </div>
+          <p className="text-sm font-semibold text-slate-800">
+            {selected.accessPin ? "This profile is PIN protected." : "No PIN set. The profile opens without one."}
+          </p>
+          {pinNotice ? <p className="text-sm font-semibold text-emerald-800">{pinNotice}</p> : null}
         </form>
         {confirmDelete ? (
           <div className="mt-3 rounded-lg bg-slate-100 p-3">
@@ -461,59 +527,42 @@ function csvCell(value: string) {
   return value;
 }
 
-function AddSquadPlayer({ teamId }: { teamId: string }) {
-  const addPlayer = useClubStore((state) => state.addPlayer);
-  const [name, setName] = useState("");
-  const [number, setNumber] = useState(1);
-  const [role, setRole] = useState<PositionChoice>("Central midfielder");
-  const [roles, setRoles] = useState<StandardPosition[]>([]);
-  const [photo, setPhoto] = useState("");
+function AllocatePlayers({ teamId, teamLabel }: { teamId: string; teamLabel: string }) {
+  const players = useClubStore((state) => state.players);
+  const assignPlayer = useClubStore((state) => state.assignPlayer);
+  const waiting = players
+    .filter((player) => !player.teamId)
+    .sort((a, b) => a.squadNumber - b.squadNumber || a.name.localeCompare(b.name));
 
   return (
-    <form
-      className="flex flex-wrap items-end gap-3 rounded-xl bg-white p-4 ring-1 ring-slate-300"
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (!name.trim()) return;
-        addPlayer({
-          name: name.trim(),
-          squadNumber: number,
-          position: role,
-          positions: roles,
-          teamId,
-          photo,
-        });
-        setName("");
-        setPhoto("");
-        setRole("Central midfielder");
-        setRoles([]);
-      }}
-    >
-      <label className="text-sm font-semibold text-slate-800">
-        Add player
-        <input value={name} data-field="add-name" onChange={(event) => setName(event.target.value)} className="mt-1 block h-11 rounded-md border border-slate-300 px-3 text-base" required />
-      </label>
-      <label className="text-sm font-semibold text-slate-800">
-        Number
-        <input type="number" min={1} max={99} data-field="add-number" value={number} onChange={(event) => setNumber(Number(event.target.value))} className="mt-1 block h-11 w-24 rounded-md border border-slate-300 px-3 text-base" />
-      </label>
-      <div className="w-full">
-        <PlayerPhotoField photo={photo} name={name} field="add-photo" onPhoto={setPhoto} />
-      </div>
-      <PositionFields
-        role={role}
-        roles={roles}
-        onRole={(next) => {
-          setRole(next);
-          if (next !== "All-rounder") setRoles([]);
-        }}
-        onToggle={(item) => setRoles((current) => (current.includes(item) ? current.filter((role) => role !== item) : [...current, item]))}
-        field="add-position"
-      />
-      <Button type="submit" size="lg" className="h-11">
-        Add to squad
-      </Button>
-    </form>
+    <section className="rounded-xl bg-white p-4 ring-1 ring-slate-300" data-allocate>
+      <h2 className="text-sm font-bold uppercase tracking-wide text-slate-700">Allocate a player</h2>
+      <p className="mt-1 text-sm font-medium text-slate-700">
+        Players registered by the club who are not on a team yet. Allocating one puts them in {teamLabel}.
+      </p>
+      {waiting.length === 0 ? (
+        <p className="mt-3 text-sm font-semibold text-slate-800">Every registered player is on a team.</p>
+      ) : (
+        <ul className="mt-3 space-y-2">
+          {waiting.map((player) => (
+            <li key={player.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-slate-100 px-3 py-2">
+              <span className="flex min-w-0 items-center gap-3">
+                <PlayerPortrait photo={player.photo} name={player.name} size="sm" />
+                <span className="min-w-0">
+                  <span className="block truncate font-semibold text-slate-950">
+                    {player.squadNumber} {player.name}
+                  </span>
+                  <span className="block truncate text-sm text-slate-600">{formatPosition(player)}</span>
+                </span>
+              </span>
+              <Button type="button" size="lg" className="h-11" onClick={() => assignPlayer(player.id, teamId)}>
+                Allocate to this team
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 

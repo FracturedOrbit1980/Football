@@ -14,6 +14,9 @@ export interface ClubPlayer {
   teamId: string;
   homework: string;
   photo?: string;
+  seasonFee: number;
+  feePaid: number;
+  accessPin: string;
 }
 
 export interface ClubCoach {
@@ -116,6 +119,9 @@ export function createSeed(): ClubData {
       teamId: SQUAD_TEAM_ID,
       homework: "",
       photo: "",
+      seasonFee: 0,
+      feePaid: 0,
+      accessPin: "",
     })),
   );
   return {
