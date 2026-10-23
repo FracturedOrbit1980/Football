@@ -38,12 +38,28 @@ export function paidTotal(player: ClubPlayer) {
   return player.payments.reduce((sum, payment) => sum + payment.amount, 0);
 }
 
+export function paidSince(player: ClubPlayer, fromIso: string) {
+  if (!isIsoDate(fromIso)) return paidTotal(player);
+  return player.payments
+    .filter((payment) => payment.date >= fromIso)
+    .reduce((sum, payment) => sum + payment.amount, 0);
+}
+
+export function sponsorCreditOf(player: ClubPlayer) {
+  const sponsored = Number.isFinite(player.sponsoredAmount) ? player.sponsoredAmount : 0;
+  return Math.max(0, Math.min(Math.round(sponsored), Math.max(0, player.seasonFee)));
+}
+
+export function chargedOf(player: ClubPlayer) {
+  return Math.max(0, player.seasonFee - sponsorCreditOf(player));
+}
+
 export function outstandingOf(player: ClubPlayer) {
-  return Math.max(0, player.seasonFee - paidTotal(player));
+  return Math.max(0, chargedOf(player) - paidTotal(player));
 }
 
 export function creditOf(player: ClubPlayer) {
-  return Math.max(0, paidTotal(player) - player.seasonFee);
+  return Math.max(0, paidTotal(player) - chargedOf(player));
 }
 
 export function daysOverdue(player: ClubPlayer, today = todayIso()) {

@@ -8,7 +8,7 @@ export default function AccountingPage() {
     <div>
       <PageHeader
         title="Registration accounting"
-        description="Set each player's season fee and record the money received. Filter by team to see what that squad still owes."
+        description="Set each player's season fee, record the money received and credit club sponsorship. Search the age analysis by name, ID, registration reference, mobile or guardian, and choose a bucket to chase the oldest accounts first."
       />
       <AccountingBoard />
     </div>

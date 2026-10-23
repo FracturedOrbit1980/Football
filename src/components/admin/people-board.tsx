@@ -31,7 +31,7 @@ export function PeopleBoard() {
     <div className="space-y-6">
       <ol className="grid gap-3 md:grid-cols-3">
         <Step n="1" title="Register" detail="Capture the first name, surname, ID and mobile. The club issues a REG reference for every player." />
-        <Step n="2" title="Account" detail="Set the season fee and record payments on Accounting." />
+        <Step n="2" title="Account" detail="Set the season fee on Accounting, then send statements, agreements and sponsorship on Members." />
         <Step n="3" title="Coach" detail="The head coach allocates the player to a team and league, then runs ratings and attendance." />
       </ol>
       <RegisterForm players={players} onSave={addPlayer} />

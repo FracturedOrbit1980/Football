@@ -4,10 +4,13 @@ import { useState } from "react";
 
 import { PlayerPortrait } from "@/components/club/player-photo";
 import { Button } from "@/components/ui/button";
-import { ageAnalysis, bucketOf, creditOf, daysOverdue, isIsoDate, outstandingOf, paidTotal, rand, todayIso, AGE_BUCKETS } from "@/lib/club/accounting";
+import { ageAnalysis, bucketOf, chargedOf, creditOf, daysOverdue, isIsoDate, outstandingOf, paidTotal, rand, sponsorCreditOf, todayIso, AGE_BUCKETS, type AgeBucket } from "@/lib/club/accounting";
 import { ageLabel, ensureYouthAges } from "@/lib/club/age";
+import { planProgress, promiseStatus } from "@/lib/club/agreements";
 import { paymentDetailsLines } from "@/lib/club/registry";
-import type { ClubPlayer, PaymentRecord } from "@/lib/club/seed";
+import { searchPlayers } from "@/lib/club/registration";
+import type { ClubPlayer } from "@/lib/club/seed";
+import { printStatement, statementBalanceLine, statementMailto, type StatementContext } from "@/lib/club/statement";
 import { formatDay } from "@/lib/club/week";
 import { useClubStore } from "@/stores/club-store";
 import { activeClub, useClubLibrary } from "@/stores/club-library";
@@ -37,54 +40,78 @@ export function AccountingBoard() {
   );
   const clubName = club?.name ?? "Clubstride";
   const [filter, setFilter] = useState("");
+  const [query, setQuery] = useState("");
+  const [bucket, setBucket] = useState<AgeBucket | "">("");
   const teams = ageGroups.flatMap((group) =>
     group.teams.map((team) => ({ ...team, label: `${ageLabel(group.name)} · ${team.division ?? team.name}` })),
   );
+  const labelOf = (player: ClubPlayer) =>
+    teams.find((team) => team.id === player.teamId)?.label ?? "Not on a team yet";
   const filterLabel =
     filter === "none"
       ? "players not on a team"
       : filter
         ? teams.find((team) => team.id === filter)?.label ?? "this team"
         : "the whole club";
-  const visible = players
+  const scoped = searchPlayers(players, query, labelOf)
     .filter((player) => (filter === "" ? true : filter === "none" ? !player.teamId : player.teamId === filter))
     .slice()
     .sort((a, b) => a.squadNumber - b.squadNumber || a.name.localeCompare(b.name));
-  const totals = visible.reduce(
+  const visible = bucket
+    ? scoped.filter((player) => outstandingOf(player) > 0 && bucketOf(daysOverdue(player)) === bucket)
+    : scoped;
+  const totals = scoped.reduce(
     (sum, player) => ({
       billed: sum.billed + player.seasonFee,
+      sponsored: sum.sponsored + sponsorCreditOf(player),
       received: sum.received + paidTotal(player),
       outstanding: sum.outstanding + outstandingOf(player),
     }),
-    { billed: 0, received: 0, outstanding: 0 },
+    { billed: 0, sponsored: 0, received: 0, outstanding: 0 },
   );
-  const awaiting = visible.filter((player) => player.seasonFee > 0 && outstandingOf(player) > 0).length;
-  const ageing = ageAnalysis(visible);
+  const awaiting = scoped.filter((player) => player.seasonFee > 0 && outstandingOf(player) > 0).length;
+  const ageing = ageAnalysis(scoped);
   const paymentLines = club ? paymentDetailsLines(club) : [];
 
   return (
     <div className="space-y-6">
       <section className="rounded-xl bg-white p-4 ring-1 ring-slate-300">
-        <label className="block max-w-sm text-sm font-semibold text-slate-800">
-          Show
-          <select
-            value={filter}
-            data-field="accounting-filter"
-            onChange={(event) => setFilter(event.target.value)}
-            className="mt-1 block h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-base"
-          >
-            <option value="">All teams</option>
-            <option value="none">Not on a team yet</option>
-            {teams.map((team) => (
-              <option key={team.id} value={team.id}>
-                {team.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block text-sm font-semibold text-slate-800">
+            Show
+            <select
+              value={filter}
+              data-field="accounting-filter"
+              onChange={(event) => setFilter(event.target.value)}
+              className="mt-1 block h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-base"
+            >
+              <option value="">All teams</option>
+              <option value="none">Not on a team yet</option>
+              {teams.map((team) => (
+                <option key={team.id} value={team.id}>
+                  {team.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block text-sm font-semibold text-slate-800">
+            Search accounts
+            <input
+              type="search"
+              value={query}
+              data-field="accounting-search"
+              placeholder="Name, surname, ID, REG, mobile or guardian"
+              autoComplete="off"
+              onChange={(event) => setQuery(event.target.value)}
+              className="mt-1 block h-11 w-full rounded-md border border-slate-300 px-3 text-base"
+            />
+          </label>
+        </div>
         <p className="mt-3 text-sm font-medium text-slate-600">
-          Record the season fee, its due date, and every payment received. Outstanding is the fee less what was paid.
-          Totals and the age analysis below cover {filterLabel}.
+          Record the season fee, its due date, and every payment received. Club sponsorship is credited against the fee,
+          so outstanding is the fee less sponsorship less what was paid. Totals and the age analysis below cover{" "}
+          {filterLabel}
+          {query.trim() ? ` matching "${query.trim()}"` : ""}.
         </p>
       </section>
 
@@ -98,19 +125,44 @@ export function AccountingBoard() {
       <section aria-label="Age analysis">
         <h2 className="text-lg font-bold text-slate-950">Age analysis</h2>
         <p className="mt-1 text-sm font-medium text-slate-600">
-          Outstanding money by how long it is past its due date. Use this to chase the oldest accounts first.
+          Outstanding money by how long it is past its due date. Choose a bucket to filter the accounts below, then use
+          the search box to find a guardian, ID, registration reference or mobile number.
         </p>
         <ul className="mt-2 grid gap-3 sm:grid-cols-3 lg:grid-cols-5" data-age-analysis>
-          {AGE_BUCKETS.map((bucket) => (
-            <li key={bucket} className="rounded-xl bg-white p-4 ring-1 ring-slate-300" data-age-bucket={bucket}>
-              <p className="text-xs font-bold uppercase tracking-wide text-slate-600">{bucket}</p>
-              <p className="mt-1 text-xl font-black tabular-nums text-slate-950">{rand(ageing[bucket].amount)}</p>
-              <p className="text-xs font-semibold text-slate-600">
-                {ageing[bucket].count} {ageing[bucket].count === 1 ? "account" : "accounts"}
-              </p>
-            </li>
-          ))}
+          {AGE_BUCKETS.map((item) => {
+            const selected = bucket === item;
+            return (
+              <li key={item}>
+                <button
+                  type="button"
+                  data-age-bucket={item}
+                  aria-pressed={selected}
+                  onClick={() => setBucket(selected ? "" : item)}
+                  className={`w-full rounded-xl bg-white p-4 text-left ring-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                    selected ? "ring-2 ring-emerald-600" : "ring-slate-300 hover:ring-emerald-600"
+                  }`}
+                >
+                  <span className="block text-xs font-bold uppercase tracking-wide text-slate-600">{item}</span>
+                  <span className="mt-1 block text-xl font-black tabular-nums text-slate-950">{rand(ageing[item].amount)}</span>
+                  <span className="block text-xs font-semibold text-slate-600">
+                    {ageing[item].count} {ageing[item].count === 1 ? "account" : "accounts"}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
         </ul>
+        {bucket || totals.sponsored > 0 ? (
+          <p className="mt-2 text-sm font-semibold text-slate-700" data-age-analysis-note>
+            {bucket ? `Filtered to ${bucket}. ` : ""}
+            {totals.sponsored > 0 ? `Club sponsorship covers ${rand(totals.sponsored)} of these fees. ` : ""}
+            {bucket ? (
+              <button type="button" data-clear-bucket onClick={() => setBucket("")} className="font-bold text-emerald-700 underline">
+                Show every account
+              </button>
+            ) : null}
+          </p>
+        ) : null}
       </section>
 
       <section>
@@ -120,7 +172,9 @@ export function AccountingBoard() {
         </h2>
         {visible.length === 0 ? (
           <p className="mt-2 rounded-lg bg-white px-4 py-3 text-sm font-medium text-slate-600 ring-1 ring-slate-300">
-            No players match this filter. Register players on People, then set their fee here.
+            {bucket || query.trim()
+              ? "No account matches this filter. Clear the search or choose another bucket."
+              : "No players match this filter. Register players on People, then set their fee here."}
           </p>
         ) : (
           <ul className="mt-2 space-y-3" data-accounting-list>
@@ -129,7 +183,7 @@ export function AccountingBoard() {
                 key={player.id}
                 player={player}
                 clubName={clubName}
-                teamLabel={teams.find((team) => team.id === player.teamId)?.label ?? "Not on a team yet"}
+                teamLabel={labelOf(player)}
                 paymentLines={paymentLines}
               />
             ))}
@@ -177,6 +231,9 @@ function AccountRow({
   const outstanding = outstandingOf(preview);
   const days = daysOverdue(preview);
   const status = statusFrom(feeValue, paid);
+  const sponsored = sponsorCreditOf(player);
+  const progress = planProgress(player);
+  const promised = promiseStatus(player);
 
   return (
     <li className="rounded-xl bg-white p-4 ring-1 ring-slate-300" data-account={player.name}>
@@ -208,6 +265,24 @@ function AccountRow({
                 ? `Due ${formatDay(preview.feeDueDate)} · ${days} ${days === 1 ? "day" : "days"} overdue (${bucketOf(days)}).`
                 : `Due ${formatDay(preview.feeDueDate)} · not yet due.`}
       </p>
+
+      {sponsored > 0 ? (
+        <p className="mt-1 text-sm font-semibold text-emerald-800" data-account-sponsorship>
+          Club sponsorship covers {rand(sponsored)} · the family is billed {rand(chargedOf(preview))}.
+        </p>
+      ) : null}
+
+      {progress || player.promise ? (
+        <p className="mt-1 text-sm font-semibold text-slate-700" data-account-arrangement>
+          {progress
+            ? `Payment agreement: ${progress.settled} of ${progress.rows.length} instalments paid · ${progress.status}.`
+            : ""}
+          {progress && player.promise ? " " : ""}
+          {player.promise
+            ? `Promise to pay ${rand(player.promise.amount)} by ${formatDay(player.promise.date)} (${promised}).`
+            : ""}
+        </p>
+      ) : null}
 
       <form
         className="mt-3 grid items-end gap-3 sm:grid-cols-2 lg:grid-cols-[repeat(4,minmax(0,1fr))_auto]"
@@ -333,13 +408,18 @@ function StatementPanel({
   const paid = paidTotal(player);
   const outstanding = outstandingOf(player);
   const credit = creditOf(player);
+  const sponsored = sponsorCreditOf(player);
   const payments = [...player.payments].sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
+  const context: StatementContext = {
+    clubName,
+    teamLabel,
+    guardian: guardianName || player.guardianName,
+    paymentLines,
+  };
   const balanceLine = statementBalanceLine(player);
-  const subject = `Statement of account — ${player.name}`;
-  const body = statementText(player, clubName, teamLabel, guardianName || player.guardianName, paymentLines);
-  const mailto = player.guardianEmail
-    ? `mailto:${player.guardianEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
-    : "";
+  const mailto = statementMailto(player, context);
+  const progress = planProgress(player);
+  const promised = promiseStatus(player);
 
   return (
     <section className="mt-3 space-y-4 border-t border-slate-200 pt-3" data-statement={player.id}>
@@ -432,6 +512,18 @@ function StatementPanel({
             <dt className="font-medium text-slate-700">Season fee {player.feeDueDate ? `(due ${formatDay(player.feeDueDate)})` : ""}</dt>
             <dd className="tabular-nums font-bold text-slate-950">{rand(player.seasonFee)}</dd>
           </div>
+          {sponsored > 0 ? (
+            <>
+              <div className="flex justify-between gap-3 sm:col-span-2">
+                <dt className="font-medium text-emerald-800">Club sponsorship</dt>
+                <dd className="tabular-nums font-bold text-emerald-800">− {rand(sponsored)}</dd>
+              </div>
+              <div className="flex justify-between gap-3 sm:col-span-2">
+                <dt className="font-medium text-slate-700">Billed to the family</dt>
+                <dd className="tabular-nums font-bold text-slate-950">{rand(chargedOf(player))}</dd>
+              </div>
+            </>
+          ) : null}
           <div className="flex justify-between gap-3 sm:col-span-2">
             <dt className="font-medium text-slate-700">Payments received ({payments.length})</dt>
             <dd className="tabular-nums font-bold text-slate-950">{rand(paid)}</dd>
@@ -445,6 +537,30 @@ function StatementPanel({
           ) : null}
         </dl>
         <p className="mt-2 text-sm font-medium text-slate-700">{balanceLine}</p>
+        {progress || player.promise ? (
+          <div className="mt-2 rounded-lg bg-white p-3 text-sm ring-1 ring-slate-300" data-statement-arrangement>
+            <p className="font-bold text-slate-900">Payment arrangement</p>
+            {progress ? (
+              <>
+                <p className="text-slate-700">
+                  {progress.rows.length} {progress.rows.length === 1 ? "instalment" : "instalments"} totalling{" "}
+                  {rand(progress.total)} · {progress.settled} paid · {progress.status}.
+                </p>
+                {progress.next ? (
+                  <p className="text-slate-700">
+                    Next: {rand(progress.next.amount)} due {formatDay(progress.next.dueDate)}.
+                  </p>
+                ) : null}
+              </>
+            ) : null}
+            {player.promise ? (
+              <p className="text-slate-700">
+                Promise to pay {rand(player.promise.amount)} by {formatDay(player.promise.date)} ({promised}).
+              </p>
+            ) : null}
+            <p className="mt-1 text-xs font-medium text-slate-600">Set up or change agreements and promises on Members.</p>
+          </div>
+        ) : null}
         {paymentLines.length > 0 ? (
           <div className="mt-2 rounded-lg bg-white p-3 text-sm ring-1 ring-slate-300" data-statement-pay>
             <p className="font-bold text-slate-900">How to pay</p>
@@ -462,7 +578,7 @@ function StatementPanel({
             size="lg"
             className="h-11"
             onClick={() => {
-              const printed = printStatement(player, clubName, teamLabel, guardianName || player.guardianName, paymentLines);
+              const printed = printStatement(player, context);
               if (printed) {
                 addCorrespondence(player.id, "Print", `Statement printed for ${guardianName || player.guardianName || "the guardian"}.`);
                 setNotice("Statement printed and added to correspondence.");
@@ -508,154 +624,4 @@ function StatementPanel({
       </p>
     </section>
   );
-}
-
-function statementBalanceLine(player: ClubPlayer) {
-  const outstanding = outstandingOf(player);
-  if (outstanding <= 0) {
-    const credit = creditOf(player);
-    return credit > 0 ? `This account is in credit by ${rand(credit)}.` : "This account is settled. Thank you.";
-  }
-  if (!isIsoDate(player.feeDueDate)) return `Please arrange payment of ${rand(outstanding)}.`;
-  const days = daysOverdue(player);
-  if (days <= 0) return `A balance of ${rand(outstanding)} is not yet due.`;
-  return `A balance of ${rand(outstanding)} is ${days} ${days === 1 ? "day" : "days"} overdue (${bucketOf(days)}).`;
-}
-
-function statementText(
-  player: ClubPlayer,
-  clubName: string,
-  teamLabel: string,
-  guardian: string,
-  paymentLines: string[],
-) {
-  const payments = [...player.payments].sort((a, b) => a.date.localeCompare(b.date));
-  const lines = [
-    clubName,
-    `Statement of account — ${player.name}`,
-    "",
-    `Registration: ${player.regNumber}`,
-    `Guardian: ${guardian || "Not recorded"}`,
-    `Team: ${teamLabel}`,
-    `Statement date: ${formatDay(todayIso())}`,
-    "",
-    player.feeDueDate
-      ? `Season registration fee (due ${formatDay(player.feeDueDate)}): ${rand(player.seasonFee)}`
-      : `Season registration fee: ${rand(player.seasonFee)}`,
-    "",
-    payments.length ? "Payments received:" : "No payments received.",
-    ...payments.map((payment) => `  ${formatDay(payment.date)}: ${rand(payment.amount)}`),
-    "",
-    `Total received: ${rand(paidTotal(player))}`,
-    `Balance outstanding: ${rand(outstandingOf(player))}`,
-    statementBalanceLine(player),
-    "",
-    ...(paymentLines.length
-      ? [
-          "How to pay:",
-          ...paymentLines.map((line) => `  ${line}`),
-          ...(player.regNumber ? [`  Reference: ${player.regNumber}`] : []),
-          "",
-        ]
-      : []),
-    "Please contact the club if you have any questions about this statement.",
-  ];
-  return lines.join("\n");
-}
-
-function printStatement(
-  player: ClubPlayer,
-  clubName: string,
-  teamLabel: string,
-  guardian: string,
-  paymentLines: string[],
-) {
-  const win = window.open("", "_blank", "width=760,height=900");
-  if (!win) return false;
-  win.document.write(statementHtml(player, clubName, teamLabel, guardian, paymentLines));
-  win.document.close();
-  win.focus();
-  window.setTimeout(() => win.print(), 250);
-  return true;
-}
-
-function statementHtml(
-  player: ClubPlayer,
-  clubName: string,
-  teamLabel: string,
-  guardian: string,
-  paymentLines: string[],
-) {
-  const payments = [...player.payments].sort((a, b) => a.date.localeCompare(b.date));
-  const rows = [
-    `<tr><td>${player.feeDueDate ? escapeHtml(formatDay(player.feeDueDate)) : "—"}</td><td>Season registration fee</td><td class="num">${escapeHtml(rand(player.seasonFee))}</td></tr>`,
-    ...payments.map(
-      (payment: PaymentRecord) =>
-        `<tr><td>${escapeHtml(formatDay(payment.date))}</td><td>Payment received</td><td class="num">− ${escapeHtml(rand(payment.amount))}</td></tr>`,
-    ),
-  ].join("");
-  const balanceLabel = creditOf(player) > 0 ? "In credit" : "Outstanding";
-  const balanceAmount = creditOf(player) > 0 ? rand(creditOf(player)) : rand(outstandingOf(player));
-  const payBlock =
-    paymentLines.length > 0
-      ? `<div class="pay"><h2>How to pay</h2>${paymentLines
-          .map((line) => `<p>${escapeHtml(line)}</p>`)
-          .join("")}${player.regNumber ? `<p class="ref">Reference: ${escapeHtml(player.regNumber)}</p>` : ""}</div>`
-      : "";
-  return `<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<title>Statement — ${escapeHtml(player.name)}</title>
-<style>
-  body { font-family: Inter, "Segoe UI", system-ui, sans-serif; color: #0b1b33; margin: 32px; line-height: 1.45; }
-  header { border-bottom: 3px solid #0f766e; padding-bottom: 12px; margin-bottom: 24px; }
-  .brand { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: #0f766e; font-weight: 700; }
-  h1 { font-size: 24px; margin: 6px 0 0; }
-  .meta { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 24px; margin: 0 0 24px; font-size: 14px; }
-  .meta dt { color: #475569; font-weight: 600; margin: 0; }
-  .meta dd { margin: 0 0 8px; font-weight: 700; }
-  table { width: 100%; border-collapse: collapse; font-size: 14px; }
-  th, td { padding: 10px 8px; border-bottom: 1px solid #cbd5e1; text-align: left; }
-  th { background: #f1f5f9; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
-  .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .total td { border-top: 2px solid #0b1b33; border-bottom: none; font-weight: 800; font-size: 15px; }
-  .note { margin-top: 20px; padding: 12px; background: #f8fafc; border-left: 4px solid #0f766e; font-size: 14px; }
-  .pay { margin-top: 20px; padding: 12px; background: #f1f5f9; border-left: 4px solid #0b1b33; font-size: 14px; }
-  .pay h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; margin: 0 0 6px; }
-  .pay p { margin: 2px 0; }
-  .pay .ref { margin-top: 8px; font-weight: 800; }
-  footer { margin-top: 28px; font-size: 12px; color: #64748b; }
-  @media print { body { margin: 16mm; } }
-</style>
-</head>
-<body>
-<header>
-  <p class="brand">${escapeHtml(clubName)}</p>
-  <h1>Statement of account</h1>
-</header>
-<dl class="meta">
-  <div><dt>Player</dt><dd>${escapeHtml(player.name)}</dd></div>
-  <div><dt>Registration</dt><dd>${escapeHtml(player.regNumber || "—")}</dd></div>
-  <div><dt>Guardian</dt><dd>${escapeHtml(guardian || "Not recorded")}</dd></div>
-  <div><dt>Team</dt><dd>${escapeHtml(teamLabel)}</dd></div>
-  <div><dt>Statement date</dt><dd>${escapeHtml(formatDay(todayIso()))}</dd></div>
-</dl>
-<table>
-  <thead><tr><th>Date</th><th>Description</th><th class="num">Amount</th></tr></thead>
-  <tbody>
-    ${rows}
-    <tr class="total"><td colspan="2">${escapeHtml(balanceLabel)}</td><td class="num">${escapeHtml(balanceAmount)}</td></tr>
-  </tbody>
-</table>
-${payBlock}
-<p class="note">${escapeHtml(statementBalanceLine(player))}</p>
-<footer>${escapeHtml(clubName)} · Statement generated ${escapeHtml(formatDay(todayIso()))}. Please contact the club if you have any questions.</footer>
-</body>
-</html>`;
-}
-
-function escapeHtml(value: string) {
-  const map: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
-  return value.replace(/[&<>"']/g, (char) => map[char] ?? char);
 }

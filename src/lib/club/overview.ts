@@ -16,8 +16,10 @@ export function readClubAccountSummary(club: ClubProfile): ClubAccountSummary {
     const state = (JSON.parse(raw) as { state?: { players?: unknown } }).state;
     if (!Array.isArray(state?.players)) return EMPTY;
     return state.players.reduce<ClubAccountSummary>((sum, value) => {
-      const player = value as { seasonFee?: unknown; payments?: unknown };
+      const player = value as { seasonFee?: unknown; sponsoredAmount?: unknown; payments?: unknown };
       const fee = typeof player.seasonFee === "number" ? player.seasonFee : 0;
+      const sponsored = typeof player.sponsoredAmount === "number" ? player.sponsoredAmount : 0;
+      const charged = Math.max(0, fee - Math.max(0, Math.min(sponsored, fee)));
       const payments = Array.isArray(player.payments) ? player.payments : [];
       const received = payments.reduce((total, payment) => {
         const amount = (payment as { amount?: unknown } | null)?.amount;
@@ -26,7 +28,7 @@ export function readClubAccountSummary(club: ClubProfile): ClubAccountSummary {
       return {
         players: sum.players + 1,
         received: sum.received + received,
-        outstanding: sum.outstanding + Math.max(0, fee - received),
+        outstanding: sum.outstanding + Math.max(0, charged - received),
       };
     }, EMPTY);
   } catch {

@@ -2,6 +2,7 @@
 
 import {
   ClipboardList,
+  ContactRound,
   LayoutDashboard,
   Library,
   Pencil,
@@ -23,6 +24,7 @@ import { activeClub, useClubLibrary } from "@/stores/club-library";
 const ADMIN_NAV: { href: string; label: string; icon: typeof Users }[] = [
   { href: "/admin", label: "Club", icon: LayoutDashboard },
   { href: "/admin/people", label: "People", icon: Users },
+  { href: "/admin/members", label: "Members", icon: ContactRound },
   { href: "/admin/accounting", label: "Accounting", icon: Wallet },
   { href: "/admin/drills", label: "Drills", icon: Library },
 ];

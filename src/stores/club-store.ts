@@ -4,6 +4,7 @@ import { persist } from "zustand/middleware";
 import { ageNumber, ensureYouthAges, sortByAge } from "@/lib/club/age";
 import { isIsoDate, todayIso } from "@/lib/club/accounting";
 import { normalizePositions } from "@/lib/club/positions";
+import { normalizePlan, normalizePromise } from "@/lib/club/agreements";
 import { canonicalDivision, canonicalTeamName, type Division, type DrillLevel, type DrillType, type MomentOfGame, type PlayerCount, type SetupDiagram } from "@/lib/club/catalog";
 import { isDrillLevel, isDrillType, isMoment, skillOf, withUefaDrills, youthAgeOf } from "@/lib/club/drill-record";
 import { DEFAULT_PITCH_COLOR, type DrillBoard } from "@/lib/club/board";
@@ -21,6 +22,8 @@ import {
   type CorrespondenceChannel,
   type CorrespondenceEntry,
   type EvaluationRecord,
+  type PaymentPlan,
+  type PromiseToPay,
   type SavedMatch,
   type SessionPlan,
   type TrainingStatus,
@@ -93,6 +96,9 @@ interface ClubState extends ClubData {
   ) => void;
   recordPayment: (playerId: string, amount: number, date: string) => void;
   removePayment: (playerId: string, paymentId: string) => void;
+  setPlayerSponsorship: (playerId: string, amount: number) => void;
+  setPaymentPlan: (playerId: string, plan: PaymentPlan | null) => void;
+  setPromiseToPay: (playerId: string, promise: PromiseToPay | null) => void;
   setPlayerPin: (playerId: string, pin: string) => void;
   deletePlayer: (playerId: string) => void;
   addCoach: (teamId: string, name: string) => void;
@@ -260,8 +266,11 @@ export const useClubStore = create<ClubState>()(
                 homework: "",
                 photo: input.photo ?? "",
                 seasonFee: 0,
+                sponsoredAmount: 0,
                 feeDueDate: "",
                 payments: [],
+                paymentPlan: null,
+                promise: null,
                 guardianName: "",
                 guardianEmail: "",
                 accessPin: "",
@@ -308,8 +317,11 @@ export const useClubStore = create<ClubState>()(
               homework: "",
               photo: "",
               seasonFee: 0,
+              sponsoredAmount: 0,
               feeDueDate: "",
               payments: [],
+              paymentPlan: null,
+              promise: null,
               guardianName: "",
               guardianEmail: "",
               accessPin: "",
@@ -413,6 +425,26 @@ export const useClubStore = create<ClubState>()(
             player.id === playerId
               ? { ...player, payments: player.payments.filter((payment) => payment.id !== paymentId) }
               : player,
+          ),
+        })),
+      setPlayerSponsorship: (playerId, amount) =>
+        set((state) => ({
+          players: state.players.map((player) =>
+            player.id === playerId
+              ? { ...player, sponsoredAmount: Math.max(0, Math.round(Number.isFinite(amount) ? amount : 0)) }
+              : player,
+          ),
+        })),
+      setPaymentPlan: (playerId, plan) =>
+        set((state) => ({
+          players: state.players.map((player) =>
+            player.id === playerId ? { ...player, paymentPlan: normalizePlan(plan) } : player,
+          ),
+        })),
+      setPromiseToPay: (playerId, promise) =>
+        set((state) => ({
+          players: state.players.map((player) =>
+            player.id === playerId ? { ...player, promise: normalizePromise(promise) } : player,
           ),
         })),
       setPlayerPin: (playerId, pin) =>
@@ -761,6 +793,12 @@ export const useClubStore = create<ClubState>()(
                 : 0,
             feeDueDate: isIsoDate(player.feeDueDate) ? player.feeDueDate : "",
             payments,
+            sponsoredAmount:
+              typeof player.sponsoredAmount === "number" && Number.isFinite(player.sponsoredAmount)
+                ? Math.max(0, Math.round(player.sponsoredAmount))
+                : 0,
+            paymentPlan: normalizePlan(player.paymentPlan),
+            promise: normalizePromise(player.promise),
             guardianName: typeof player.guardianName === "string" ? player.guardianName.slice(0, 80) : "",
             guardianEmail: typeof player.guardianEmail === "string" ? player.guardianEmail.slice(0, 120) : "",
             accessPin:

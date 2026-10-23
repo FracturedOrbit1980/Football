@@ -12,6 +12,24 @@ export interface PaymentRecord {
   amount: number;
 }
 
+export interface PlanInstalment {
+  id: string;
+  dueDate: string;
+  amount: number;
+}
+
+export interface PaymentPlan {
+  id: string;
+  agreedOn: string;
+  instalments: PlanInstalment[];
+}
+
+export interface PromiseToPay {
+  date: string;
+  amount: number;
+  notedOn: string;
+}
+
 export const CORRESPONDENCE_CHANNELS = ["Call", "Email", "SMS", "Note"] as const;
 export type CorrespondenceChannel = "Registration" | "Print" | (typeof CORRESPONDENCE_CHANNELS)[number];
 
@@ -38,8 +56,11 @@ export interface ClubPlayer {
   homework: string;
   photo?: string;
   seasonFee: number;
+  sponsoredAmount: number;
   feeDueDate: string;
   payments: PaymentRecord[];
+  paymentPlan: PaymentPlan | null;
+  promise: PromiseToPay | null;
   guardianName: string;
   guardianEmail: string;
   accessPin: string;
@@ -154,8 +175,11 @@ export function createSeed(): ClubData {
         homework: "",
         photo: "",
         seasonFee: 0,
+        sponsoredAmount: 0,
         feeDueDate: "",
         payments: [],
+        paymentPlan: null,
+        promise: null,
         guardianName: "",
         guardianEmail: "",
         accessPin: "",

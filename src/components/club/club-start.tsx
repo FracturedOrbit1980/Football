@@ -30,7 +30,9 @@ export function ClubStart() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const visibleClubs = clubScope ? clubs.filter((club) => club.id === clubScope) : clubs;
-  const canRegisterClub = !role || role === "DEVELOPER";
+  const registeredClubs = clubs.filter((club) => club.kind === "custom");
+  // A registration covers one club: only a Developer sign-in can register another once one exists.
+  const canRegisterClub = role === "DEVELOPER" || (!role && registeredClubs.length === 0);
   const canEditClub = (clubId: string) =>
     !role || role === "DEVELOPER" || (role === "SUPER_ADMIN" && clubId === clubScope);
   const canDeleteClub = (clubId: string) => clubId !== DEFAULT_CLUB_ID && (!role || role === "DEVELOPER");
@@ -44,7 +46,7 @@ export function ClubStart() {
       <h1 className="mt-2 break-words text-[clamp(1.85rem,1.2rem+2.2vw,3.25rem)] font-black leading-[1.12] tracking-tight text-slate-950">{current ? current.name : "Load a club"}</h1>
       <p className="mt-4 max-w-xl text-lg leading-relaxed text-slate-700">
         {clubScope
-          ? "This sign-in only shows your club. Sign out to register a club or open another one."
+          ? "This sign-in only shows your club. Sign out to open another one; registering a second club needs a Developer sign-in."
           : "Choose a club to open. Players, teams, drills, attendance, and the colours stay with that club."}
       </p>
       <div className="mt-8 grid gap-4" data-club-list>
@@ -148,18 +150,26 @@ export function ClubStart() {
           </div>
         </div>
       ) : (
-        <p className="text-base font-semibold text-slate-700">Load {CLUB_NAME}, or add a club, before you open a role.</p>
+        <p className="text-base font-semibold text-slate-700">Load {CLUB_NAME}, or register a club, before you open a role.</p>
       )}
       {canRegisterClub ? (
-        <section className="rounded-2xl bg-white p-5 ring-1 ring-slate-300 sm:p-6" aria-label="Add a club">
-          <h2 className="text-lg font-black text-slate-950">Add a club</h2>
+        <section className="rounded-2xl bg-white p-5 ring-1 ring-slate-300 sm:p-6" aria-label="Register a club">
+          <h2 className="text-lg font-black text-slate-950">Register a club</h2>
+          <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">
+            Registration covers one club only. Its players, fees, statements and colours stay with that club.
+          </p>
           <ClubForm
-            submitLabel="Add club"
+            submitLabel="Register club"
             onSubmit={(input) => {
               void addClub(input);
             }}
           />
         </section>
+      ) : !role && registeredClubs.length > 0 ? (
+        <p className="rounded-2xl bg-white p-5 text-sm font-medium leading-relaxed text-slate-600 ring-1 ring-slate-300" data-one-club-note>
+          {registeredClubs[0].name} is registered on this device. Registration covers one club only, so sign in as a
+          Developer to register another.
+        </p>
       ) : null}
       </div>
     </div>
