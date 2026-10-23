@@ -381,18 +381,13 @@ function ClubLogo({ club }: { club: ClubProfile }) {
   const base = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
   if (!club.logo && club.id === DEFAULT_CLUB_ID) {
     return (
-      <>
-        <img
-          src={`${base}/icons/clubstride-symbol.png`}
-          alt=""
-          className="logo-plate size-12 shrink-0 rounded-full object-contain ring-1 ring-slate-300 dark:hidden"
-        />
+      <span className="club-mark grid size-12 shrink-0 place-items-center rounded-full bg-[#0b1b33] ring-1 ring-slate-300 dark:bg-transparent dark:ring-0">
         <img
           src={`${base}/icons/clubstride-symbol-dark.png`}
           alt=""
-          className="hidden size-12 shrink-0 rounded-full object-contain dark:block"
+          className="size-10 object-contain dark:size-12"
         />
-      </>
+      </span>
     );
   }
   const src = club.logo || "";
