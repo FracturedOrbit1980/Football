@@ -6,10 +6,15 @@ import { PlayerUpload } from "@/components/admin/player-upload";
 import { Button } from "@/components/ui/button";
 import { PlayerPhotoField, PlayerPortrait } from "@/components/club/player-photo";
 import { PositionFields } from "@/components/club/position-fields";
+import { creditOf, outstandingOf, paidTotal, rand } from "@/lib/club/accounting";
 import { ageLabel, ensureYouthAges } from "@/lib/club/age";
 import { formatPosition, normalizePositions, type PositionChoice, type StandardPosition } from "@/lib/club/positions";
-import type { ClubPlayer } from "@/lib/club/seed";
-import { useClubStore } from "@/stores/club-store";
+import { digitsOf, joinName, searchPlayers, splitName } from "@/lib/club/registration";
+import { CORRESPONDENCE_CHANNELS, type ClubPlayer, type CorrespondenceChannel } from "@/lib/club/seed";
+import { formatDay } from "@/lib/club/week";
+import { useClubStore, type NewPlayerInput } from "@/stores/club-store";
+
+type TeamOption = { id: string; ageGroup: string; division?: string; name: string };
 
 export function PeopleBoard() {
   const ageGroups = ensureYouthAges(useClubStore((state) => state.ageGroups));
@@ -21,36 +26,17 @@ export function PeopleBoard() {
   const teams = ageGroups.flatMap((group) =>
     group.teams.map((team) => ({ ...team, ageGroup: ageLabel(group.name) })),
   );
-  const waiting = players.filter((player) => !player.teamId);
-  const placed = players.filter((player) => player.teamId);
 
   return (
     <div className="space-y-6">
       <ol className="grid gap-3 md:grid-cols-3">
-        <Step n="1" title="Register" detail="Add each player with a number, starting position, and photo. A team is not required yet." />
+        <Step n="1" title="Register" detail="Capture the first name, surname, ID and mobile. The club issues a REG reference for every player." />
         <Step n="2" title="Account" detail="Set the season fee and record payments on Accounting." />
         <Step n="3" title="Coach" detail="The head coach allocates the player to a team and league, then runs ratings and attendance." />
       </ol>
-      <RegisterForm
-        onSave={(input) => {
-          addPlayer(input);
-        }}
-      />
+      <RegisterForm players={players} onSave={addPlayer} />
       <PlayerUpload />
-      <PlayerList
-        title="Waiting for a coach"
-        empty="Registered players who are not on a team yet appear here. Your head coach allocates them onto a team."
-        players={waiting}
-        teams={teams}
-        onSave={updatePlayer}
-      />
-      <PlayerList
-        title="On a team"
-        empty="Players appear here once the head coach has allocated them."
-        players={placed}
-        teams={teams}
-        onSave={updatePlayer}
-      />
+      <PlayerDirectory players={players} teams={teams} onSave={updatePlayer} />
       <CoachAssign teams={teams} coaches={coaches} onAssign={addCoach} />
     </div>
   );
@@ -61,7 +47,7 @@ function CoachAssign({
   coaches,
   onAssign,
 }: {
-  teams: { id: string; ageGroup: string; division?: string; name: string }[];
+  teams: TeamOption[];
   coaches: { teamId: string; name: string }[];
   onAssign: (teamId: string, name: string) => void;
 }) {
@@ -115,62 +101,131 @@ function Step({ n, title, detail }: { n: string; title: string; detail: string }
 }
 
 function RegisterForm({
+  players,
   onSave,
 }: {
-  onSave: (input: { name: string; squadNumber: number; position: string; positions: string[]; teamId: string; photo: string }) => void;
+  players: ClubPlayer[];
+  onSave: (input: NewPlayerInput) => string;
 }) {
-  const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [surname, setSurname] = useState("");
+  const [idNumber, setIdNumber] = useState("");
+  const [mobile, setMobile] = useState("");
   const [number, setNumber] = useState(1);
   const [role, setRole] = useState<PositionChoice>("Central midfielder");
   const [roles, setRoles] = useState<StandardPosition[]>([]);
   const [photo, setPhoto] = useState("");
+  const [notice, setNotice] = useState("");
+  const [error, setError] = useState("");
 
   return (
     <form
       className="grid gap-3 rounded-xl bg-white p-4 ring-1 ring-slate-300 sm:grid-cols-2"
       onSubmit={(event) => {
         event.preventDefault();
-        if (!name.trim()) return;
-        onSave({
-          name: name.trim(),
+        setNotice("");
+        setError("");
+        if (!firstName.trim() || !surname.trim()) {
+          setError("Enter the player's first name and surname.");
+          return;
+        }
+        const idDigits = digitsOf(idNumber);
+        const duplicate = idDigits
+          ? players.find((player) => player.idNumber && digitsOf(player.idNumber) === idDigits)
+          : undefined;
+        if (duplicate) {
+          setError(`That ID number is already registered to ${duplicate.name} (${duplicate.regNumber}).`);
+          return;
+        }
+        if (mobile.trim() && digitsOf(mobile).length < 7) {
+          setError("Enter a mobile number with at least 7 digits.");
+          return;
+        }
+        const name = joinName(firstName, surname);
+        const reference = onSave({
+          firstName,
+          surname,
+          idNumber,
+          mobile,
           squadNumber: number,
           position: role,
           positions: roles,
           teamId: "",
           photo,
         });
-        setName("");
+        setNotice(`${name} registered as ${reference}.`);
+        setFirstName("");
+        setSurname("");
+        setIdNumber("");
+        setMobile("");
         setPhoto("");
         setNumber((current) => Math.min(99, current + 1));
       }}
     >
       <div className="sm:col-span-2">
         <h2 className="text-lg font-bold text-slate-950">Register a player</h2>
-        <p className="mt-1 text-sm font-medium text-slate-600">Add another after this one. The head coach can change the position or team later.</p>
+        <p className="mt-1 text-sm font-medium text-slate-600">
+          The club issues a registration reference when you save. Add the ID and mobile number so the record is easy to find later. The head coach can change the position or team later.
+        </p>
       </div>
       <label className="text-sm font-semibold text-slate-800">
-        Name
+        First name
         <input
-          value={name}
-          data-field="register-name"
-          onChange={(event) => setName(event.target.value)}
+          value={firstName}
+          data-field="register-first-name"
+          autoComplete="off"
+          onChange={(event) => setFirstName(event.target.value)}
           className="mt-1 h-11 w-full rounded-md border border-slate-300 px-3 text-base"
           required
         />
       </label>
       <label className="text-sm font-semibold text-slate-800">
-        Number
+        Surname
+        <input
+          value={surname}
+          data-field="register-surname"
+          autoComplete="off"
+          onChange={(event) => setSurname(event.target.value)}
+          className="mt-1 h-11 w-full rounded-md border border-slate-300 px-3 text-base"
+          required
+        />
+      </label>
+      <label className="text-sm font-semibold text-slate-800">
+        ID number
+        <input
+          value={idNumber}
+          data-field="register-id"
+          inputMode="numeric"
+          autoComplete="off"
+          onChange={(event) => setIdNumber(event.target.value)}
+          className="mt-1 h-11 w-full rounded-md border border-slate-300 px-3 text-base tabular-nums"
+        />
+      </label>
+      <label className="text-sm font-semibold text-slate-800">
+        Mobile number
+        <input
+          value={mobile}
+          data-field="register-mobile"
+          type="tel"
+          autoComplete="off"
+          onChange={(event) => setMobile(event.target.value)}
+          className="mt-1 h-11 w-full rounded-md border border-slate-300 px-3 text-base tabular-nums"
+        />
+      </label>
+      <label className="text-sm font-semibold text-slate-800">
+        Shirt number
         <input
           type="number"
           min={1}
           max={99}
           value={number}
+          data-field="register-number"
           onChange={(event) => setNumber(Number(event.target.value))}
           className="mt-1 h-11 w-full rounded-md border border-slate-300 px-3 text-base"
         />
       </label>
       <div className="sm:col-span-2">
-        <PlayerPhotoField photo={photo} name={name} field="register-photo" onPhoto={setPhoto} />
+        <PlayerPhotoField photo={photo} name={joinName(firstName, surname)} field="register-photo" onPhoto={setPhoto} />
       </div>
       <div className="sm:col-span-2">
         <p className="mb-1 text-sm font-semibold text-slate-800">Starting position</p>
@@ -185,108 +240,250 @@ function RegisterForm({
           field="register-position"
         />
       </div>
-      <Button type="submit" size="lg" className="h-11 sm:col-span-2 sm:w-fit">
-        Register player
-      </Button>
+      <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
+        <Button type="submit" size="lg" className="h-11">
+          Register player
+        </Button>
+        {notice ? <p className="text-sm font-semibold text-emerald-800" data-registration-notice>{notice}</p> : null}
+        {error ? <p className="text-sm font-semibold text-rose-700" data-registration-error>{error}</p> : null}
+      </div>
     </form>
   );
 }
 
-function PlayerList({
-  title,
-  empty,
+function PlayerDirectory({
   players,
   teams,
   onSave,
 }: {
-  title: string;
-  empty: string;
   players: ClubPlayer[];
-  teams: { id: string; ageGroup: string; division?: string; name: string }[];
-  onSave: (playerId: string, input: { name: string; squadNumber: number; position: string; positions?: string[]; photo?: string }) => void;
+  teams: TeamOption[];
+  onSave: (playerId: string, input: { name: string; squadNumber: number; position: string; positions?: string[]; photo?: string; firstName?: string; surname?: string; idNumber?: string; mobile?: string }) => void;
 }) {
+  const [query, setQuery] = useState("");
+  const [selectedId, setSelectedId] = useState("");
+  const selected = players.find((player) => player.id === selectedId) ?? null;
+  const labelOf = (player: ClubPlayer) => teamLabel(teams, player);
+  const matches = searchPlayers(players, query, labelOf);
+  const ordered = query.trim()
+    ? matches
+    : [...matches].sort((a, b) => a.regNumber.localeCompare(b.regNumber) || a.name.localeCompare(b.name));
+
+  if (selected) {
+    return (
+      <PlayerRecord
+        key={selected.id}
+        player={selected}
+        teamLabel={teamLabel(teams, selected)}
+        onSave={onSave}
+        onClose={() => setSelectedId("")}
+      />
+    );
+  }
+
   return (
-    <section>
-      <h2 className="text-lg font-bold text-slate-950">
-        {title}
-        <span className="ml-2 text-sm font-semibold text-slate-500">{players.length}</span>
-      </h2>
-      {players.length === 0 ? (
-        <p className="mt-2 rounded-lg bg-white px-4 py-3 text-sm font-medium text-slate-600 ring-1 ring-slate-300">{empty}</p>
+    <section aria-label="Player records">
+      <div className="rounded-xl bg-white p-4 ring-1 ring-slate-300">
+        <h2 className="text-lg font-bold text-slate-950">Find a player</h2>
+        <p className="mt-1 text-sm font-medium text-slate-600">
+          Search by reference, ID number, mobile number, first name or surname. Add another word to narrow the list, then open the record for account and correspondence history.
+        </p>
+        <label className="mt-3 block max-w-xl text-sm font-semibold text-slate-800">
+          Search players
+          <input
+            type="search"
+            value={query}
+            data-field="player-search"
+            placeholder="REG-0001, ID, mobile, name or surname"
+            autoComplete="off"
+            onChange={(event) => setQuery(event.target.value)}
+            className="mt-1 block h-11 w-full rounded-md border border-slate-300 px-3 text-base"
+          />
+        </label>
+        <p className="mt-2 text-sm font-semibold text-slate-700" data-search-count>
+          {query.trim()
+            ? `${ordered.length} of ${players.length} ${players.length === 1 ? "player matches" : "players match"} "${query.trim()}".`
+            : `${players.length} registered ${players.length === 1 ? "player" : "players"}. Choose one to open the full record.`}
+        </p>
+      </div>
+      {ordered.length === 0 ? (
+        <p className="mt-3 rounded-lg bg-white px-4 py-3 text-sm font-medium text-slate-600 ring-1 ring-slate-300">
+          No player matches every word. Remove a word or try the registration reference.
+        </p>
       ) : (
-        <ul className="mt-2 space-y-3">
-          {players
-            .slice()
-            .sort((a, b) => a.squadNumber - b.squadNumber || a.name.localeCompare(b.name))
-            .map((player) => (
-              <PlayerRow key={player.id} player={player} teams={teams} onSave={onSave} />
-            ))}
+        <ul className="mt-3 space-y-2" data-player-results>
+          {ordered.map((player) => (
+            <li key={player.id}>
+              <button
+                type="button"
+                data-player-result={player.regNumber}
+                onClick={() => setSelectedId(player.id)}
+                className="flex w-full flex-wrap items-center gap-3 rounded-xl bg-white p-3 text-left ring-1 ring-slate-300 transition-colors hover:ring-emerald-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <PlayerPortrait photo={player.photo} name={player.name} size="sm" />
+                <span className="min-w-0 flex-1 basis-48">
+                  <span className="block text-base font-bold text-slate-950">
+                    {player.regNumber} · {player.name}
+                  </span>
+                  <span className="block text-sm font-medium text-slate-600">
+                    {player.idNumber ? `ID ${player.idNumber}` : "No ID captured"} · {player.mobile || "No mobile captured"}
+                  </span>
+                  <span className="block text-sm font-medium text-slate-600">{labelOf(player)}</span>
+                </span>
+                <span className="ml-auto shrink-0 text-sm font-bold text-emerald-700">Open record</span>
+              </button>
+            </li>
+          ))}
         </ul>
       )}
     </section>
   );
 }
 
-function PlayerRow({
+function PlayerRecord({
   player,
-  teams,
+  teamLabel,
   onSave,
+  onClose,
 }: {
   player: ClubPlayer;
-  teams: { id: string; ageGroup: string; division?: string; name: string }[];
-  onSave: (playerId: string, input: { name: string; squadNumber: number; position: string; positions?: string[]; photo?: string }) => void;
+  teamLabel: string;
+  onSave: (playerId: string, input: { name: string; squadNumber: number; position: string; positions?: string[]; photo?: string; firstName?: string; surname?: string; idNumber?: string; mobile?: string }) => void;
+  onClose: () => void;
 }) {
   const setPlayerPhoto = useClubStore((state) => state.setPlayerPhoto);
-  const [open, setOpen] = useState(false);
+  const addCorrespondence = useClubStore((state) => state.addCorrespondence);
   const stored = normalizePositions(player.position, player.positions);
-  const [name, setName] = useState(player.name);
+  const fallback = splitName(player.name);
+  const [firstName, setFirstName] = useState(player.firstName || fallback.firstName);
+  const [surname, setSurname] = useState(player.surname || fallback.surname);
+  const [idNumber, setIdNumber] = useState(player.idNumber);
+  const [mobile, setMobile] = useState(player.mobile);
   const [number, setNumber] = useState(player.squadNumber);
   const [role, setRole] = useState<PositionChoice>(stored.position);
   const [roles, setRoles] = useState<StandardPosition[]>(stored.positions);
-  const teamLabel = teams.find((team) => team.id === player.teamId);
+  const [saved, setSaved] = useState("");
+  const [error, setError] = useState("");
+  const [channel, setChannel] = useState<CorrespondenceChannel>("Note");
+  const [note, setNote] = useState("");
+  const [historyNotice, setHistoryNotice] = useState("");
+  const paid = paidTotal(player);
+  const outstanding = outstandingOf(player);
+  const credit = creditOf(player);
+  const status =
+    player.seasonFee <= 0 ? "No fee set" : outstanding <= 0 ? "Paid" : paid > 0 ? "Part paid" : "Awaiting payment";
 
   return (
-    <li className="rounded-xl bg-white p-4 ring-1 ring-slate-300" data-player={player.name}>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <section className="rounded-xl bg-white p-4 ring-1 ring-slate-300" data-player-record={player.regNumber}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
-          <PlayerPortrait photo={player.photo} name={player.name} size="sm" />
+          <PlayerPortrait photo={player.photo} name={player.name} size="md" />
           <div className="min-w-0">
-          <p className="text-base font-bold text-slate-950">
-            {player.squadNumber} {player.name}
-          </p>
-          <p className="text-sm font-medium text-slate-600">{formatPosition(player)}</p>
-          <p className="text-sm font-medium text-slate-600">
-            {teamLabel ? `${teamLabel.ageGroup} · ${teamLabel.division ?? teamLabel.name}` : "Waiting for a coach to allocate this player"}
-          </p>
+            <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">{player.regNumber}</p>
+            <h2 className="break-words text-xl font-black text-slate-950">{player.name}</h2>
+            <p className="text-sm font-medium text-slate-600">{teamLabel}</p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => setOpen((current) => !current)}
-          className="btn-quiet min-h-11 w-full shrink-0 rounded-xl px-3 py-2 text-left sm:w-auto"
-        >
-          <span className="block text-sm font-bold text-slate-950">{open ? "Close editor" : "Edit player"}</span>
-          <span className="mt-0.5 block text-xs font-medium text-slate-600">Change the name, number, or position.</span>
-        </button>
+        <Button type="button" size="lg" variant="outline" className="h-11" onClick={onClose} data-field="close-player-record">
+          Back to search
+        </Button>
       </div>
-      {open ? (
+
+      <dl className="mt-4 grid gap-3 rounded-lg bg-slate-100 p-3 sm:grid-cols-2 lg:grid-cols-4" data-player-identity>
+        <Detail label="Registration" value={player.regNumber} />
+        <Detail label="First name" value={player.firstName || "Not captured"} />
+        <Detail label="Surname" value={player.surname || "Not captured"} />
+        <Detail label="ID number" value={player.idNumber || "Not captured"} />
+        <Detail label="Mobile" value={player.mobile || "Not captured"} />
+        <Detail label="Squad number" value={String(player.squadNumber)} />
+        <Detail label="Position" value={formatPosition(player)} />
+        <Detail label="Account" value={status} />
+      </dl>
+
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <form
-          className="mt-3 space-y-3 border-t border-slate-200 pt-3"
+          className="space-y-3 rounded-lg bg-slate-100 p-3"
           onSubmit={(event) => {
             event.preventDefault();
-            if (!name.trim()) return;
-            onSave(player.id, { name: name.trim(), squadNumber: number, position: role, positions: roles });
-            setOpen(false);
+            setSaved("");
+            setError("");
+            if (!firstName.trim() || !surname.trim()) {
+              setError("First name and surname are required.");
+              return;
+            }
+            if (mobile.trim() && digitsOf(mobile).length < 7) {
+              setError("Enter a mobile number with at least 7 digits.");
+              return;
+            }
+            const name = joinName(firstName, surname);
+            onSave(player.id, {
+              name,
+              firstName,
+              surname,
+              idNumber,
+              mobile,
+              squadNumber: number,
+              position: role,
+              positions: roles,
+            });
+            setSaved(`Saved ${name}.`);
           }}
         >
-          <label className="block text-sm font-semibold text-slate-800">
-            Name
-            <input value={name} onChange={(event) => setName(event.target.value)} className="mt-1 block h-11 w-full rounded-md border border-slate-300 px-3 text-base" required />
-          </label>
-          <label className="block text-sm font-semibold text-slate-800">
-            Number
-            <input type="number" min={1} max={99} value={number} onChange={(event) => setNumber(Number(event.target.value))} className="mt-1 block h-11 w-28 rounded-md border border-slate-300 px-3 text-base" />
-          </label>
+          <h3 className="text-sm font-bold uppercase tracking-wide text-slate-700">Player details</h3>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="text-sm font-semibold text-slate-800">
+              First name
+              <input
+                value={firstName}
+                data-field="record-first-name"
+                onChange={(event) => setFirstName(event.target.value)}
+                className="mt-1 h-11 w-full rounded-md border border-slate-300 px-3 text-base"
+                required
+              />
+            </label>
+            <label className="text-sm font-semibold text-slate-800">
+              Surname
+              <input
+                value={surname}
+                data-field="record-surname"
+                onChange={(event) => setSurname(event.target.value)}
+                className="mt-1 h-11 w-full rounded-md border border-slate-300 px-3 text-base"
+                required
+              />
+            </label>
+            <label className="text-sm font-semibold text-slate-800">
+              ID number
+              <input
+                value={idNumber}
+                data-field="record-id"
+                inputMode="numeric"
+                onChange={(event) => setIdNumber(event.target.value)}
+                className="mt-1 h-11 w-full rounded-md border border-slate-300 px-3 text-base tabular-nums"
+              />
+            </label>
+            <label className="text-sm font-semibold text-slate-800">
+              Mobile number
+              <input
+                value={mobile}
+                data-field="record-mobile"
+                type="tel"
+                onChange={(event) => setMobile(event.target.value)}
+                className="mt-1 h-11 w-full rounded-md border border-slate-300 px-3 text-base tabular-nums"
+              />
+            </label>
+            <label className="text-sm font-semibold text-slate-800">
+              Shirt number
+              <input
+                type="number"
+                min={1}
+                max={99}
+                value={number}
+                data-field="record-number"
+                onChange={(event) => setNumber(Number(event.target.value))}
+                className="mt-1 h-11 w-full rounded-md border border-slate-300 px-3 text-base"
+              />
+            </label>
+          </div>
           <PositionFields
             role={role}
             roles={roles}
@@ -295,19 +492,136 @@ function PlayerRow({
               if (next !== "All-rounder") setRoles([]);
             }}
             onToggle={(item) => setRoles((current) => (current.includes(item) ? current.filter((entry) => entry !== item) : [...current, item]))}
-            field={`edit-${player.id}`}
+            field={`record-${player.id}`}
           />
           <PlayerPhotoField
             photo={player.photo}
             name={player.name}
-            field="edit-photo"
+            field="record-photo"
             onPhoto={(next) => setPlayerPhoto(player.id, next)}
           />
+          <div className="flex flex-wrap items-center gap-3">
+            <Button type="submit" size="lg" className="h-11">
+              Save details
+            </Button>
+            {saved ? <p className="text-sm font-semibold text-emerald-800" data-record-notice>{saved}</p> : null}
+            {error ? <p className="text-sm font-semibold text-rose-700" data-record-error>{error}</p> : null}
+          </div>
+        </form>
+
+        <div className="rounded-lg bg-slate-100 p-3">
+          <h3 className="text-sm font-bold uppercase tracking-wide text-slate-700">Account</h3>
+          <dl className="mt-2 grid gap-2 text-sm" data-player-account>
+            <div className="flex justify-between gap-3">
+              <dt className="font-medium text-slate-700">Season fee</dt>
+              <dd className="tabular-nums font-bold text-slate-950">{rand(player.seasonFee)}</dd>
+            </div>
+            <div className="flex justify-between gap-3">
+              <dt className="font-medium text-slate-700">Received</dt>
+              <dd className="tabular-nums font-bold text-slate-950">{rand(paid)}</dd>
+            </div>
+            <div className="flex justify-between gap-3 border-t border-slate-300 pt-2">
+              <dt className="font-bold text-slate-900">{credit > 0 ? "In credit" : "Outstanding"}</dt>
+              <dd className="tabular-nums font-black text-slate-950">{rand(credit > 0 ? credit : outstanding)}</dd>
+            </div>
+            {player.feeDueDate ? (
+              <div className="flex justify-between gap-3">
+                <dt className="font-medium text-slate-700">Fee due</dt>
+                <dd className="font-semibold text-slate-900">{formatDay(player.feeDueDate)}</dd>
+              </div>
+            ) : null}
+          </dl>
+          <p className="mt-3 text-sm font-medium text-slate-600">
+            Manage fees, payments and guardian statements on Accounting. Statements sent from there appear below.
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 border-t border-slate-200 pt-3">
+        <h3 className="text-sm font-bold uppercase tracking-wide text-slate-700">
+          Correspondence history
+          <span className="ml-2 font-semibold text-slate-500">{player.correspondence.length}</span>
+        </h3>
+        <p className="mt-1 text-sm font-medium text-slate-600">
+          Registration, printed statements and emails sent from Accounting are logged automatically. Add a note for calls, SMS or conversations.
+        </p>
+        <form
+          className="mt-2 flex flex-wrap items-end gap-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            setHistoryNotice("");
+            const text = note.trim();
+            if (!text) {
+              setError("Write what was discussed or sent before adding it.");
+              return;
+            }
+            addCorrespondence(player.id, channel, text);
+            setNote("");
+            setHistoryNotice("Added to the correspondence history.");
+          }}
+        >
+          <label className="block text-sm font-semibold text-slate-800">
+            Type
+            <select
+              value={channel}
+              data-field="correspondence-channel"
+              onChange={(event) => setChannel(event.target.value as CorrespondenceChannel)}
+              className="mt-1 block h-11 rounded-md border border-slate-300 bg-white px-3 text-base"
+            >
+              {CORRESPONDENCE_CHANNELS.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block min-w-0 flex-1 basis-56 text-sm font-semibold text-slate-800">
+            Note
+            <input
+              value={note}
+              data-field="correspondence-note"
+              onChange={(event) => setNote(event.target.value)}
+              placeholder="Phoned the guardian about the outstanding fee"
+              className="mt-1 block h-11 w-full rounded-md border border-slate-300 px-3 text-base"
+            />
+          </label>
           <Button type="submit" size="lg" className="h-11">
-            Save player
+            Add to history
           </Button>
         </form>
-      ) : null}
-    </li>
+        {historyNotice ? <p className="mt-2 text-sm font-semibold text-emerald-800" data-correspondence-notice>{historyNotice}</p> : null}
+        {player.correspondence.length === 0 ? (
+          <p className="mt-3 rounded-lg bg-white px-4 py-3 text-sm font-medium text-slate-600 ring-1 ring-slate-300">
+            No correspondence yet.
+          </p>
+        ) : (
+          <ol className="mt-3 space-y-2" data-correspondence>
+            {player.correspondence.map((entry) => (
+              <li key={entry.id} className="rounded-lg bg-white p-3 ring-1 ring-slate-300" data-correspondence-entry={entry.channel}>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold uppercase tracking-wide text-slate-700">{entry.channel}</span>
+                  <span className="text-xs font-semibold text-slate-600">{formatDay(entry.date)}</span>
+                </div>
+                <p className="mt-1 text-sm font-medium text-slate-900">{entry.summary}</p>
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
+    </section>
   );
+}
+
+function Detail({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-xs font-bold uppercase tracking-wide text-slate-600">{label}</dt>
+      <dd className="break-words text-sm font-semibold text-slate-900">{value}</dd>
+    </div>
+  );
+}
+
+function teamLabel(teams: TeamOption[], player: ClubPlayer) {
+  const team = teams.find((item) => item.id === player.teamId);
+  return team ? `${team.ageGroup} · ${team.division ?? team.name}` : "Waiting for a coach to allocate this player";
 }

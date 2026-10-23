@@ -4,7 +4,15 @@ import { useState } from "react";
 
 import { RolePicker } from "@/components/auth/role-picker";
 import { CLUB_NAME } from "@/lib/club/catalog";
-import { DEFAULT_CLUB_ID, type ClubProfile } from "@/lib/club/registry";
+import {
+  DEFAULT_CLUB_ID,
+  paymentSummary,
+  type ClubBanking,
+  type ClubInput,
+  type ClubPaymentMethod,
+  type ClubPaymentPortal,
+  type ClubProfile,
+} from "@/lib/club/registry";
 import { CLUB_THEMES, type ClubThemeId } from "@/lib/club/themes";
 import { activeClub, useClubLibrary } from "@/stores/club-library";
 
@@ -43,6 +51,7 @@ export function ClubStart() {
               <div className="min-w-0 flex-1 basis-40">
                 <h2 className="truncate text-lg font-black text-slate-950">{club.name}</h2>
                 <p className="text-sm font-semibold text-slate-600">{themeName(club.theme)}</p>
+                <p className="text-sm font-medium text-slate-600">{paymentSummary(club)}</p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <button
@@ -151,12 +160,31 @@ function ClubForm({
 }: {
   initial?: ClubProfile;
   submitLabel: string;
-  onSubmit: (input: { name: string; logo: string; theme: ClubThemeId }) => void;
+  onSubmit: (input: ClubInput) => void;
 }) {
   const [name, setName] = useState(initial?.name ?? "");
   const [logo, setLogo] = useState(initial?.logo ?? "");
   const [theme, setTheme] = useState<ClubThemeId>(initial?.theme ?? "red");
+  const [paymentMethod, setPaymentMethod] = useState<ClubPaymentMethod>(initial?.paymentMethod ?? "bank");
+  const [bankName, setBankName] = useState(initial?.banking.bankName ?? "");
+  const [accountHolder, setAccountHolder] = useState(initial?.banking.accountHolder ?? "");
+  const [accountNumber, setAccountNumber] = useState(initial?.banking.accountNumber ?? "");
+  const [branchCode, setBranchCode] = useState(initial?.banking.branchCode ?? "");
+  const [provider, setProvider] = useState(initial?.portal.provider ?? "");
+  const [portalReference, setPortalReference] = useState(initial?.portal.reference ?? "");
+  const [portalLink, setPortalLink] = useState(initial?.portal.link ?? "");
   const [notice, setNotice] = useState("");
+
+  function resetPayments() {
+    setPaymentMethod("bank");
+    setBankName("");
+    setAccountHolder("");
+    setAccountNumber("");
+    setBranchCode("");
+    setProvider("");
+    setPortalReference("");
+    setPortalLink("");
+  }
 
   return (
     <form
@@ -167,11 +195,14 @@ function ClubForm({
           setNotice("Name the club.");
           return;
         }
-        onSubmit({ name: name.trim(), logo, theme });
+        const banking: ClubBanking = { bankName, accountHolder, accountNumber, branchCode };
+        const portal: ClubPaymentPortal = { provider, reference: portalReference, link: portalLink };
+        onSubmit({ name: name.trim(), logo, theme, paymentMethod, banking, portal });
         if (!initial) {
           setName("");
           setLogo("");
           setTheme("red");
+          resetPayments();
         }
         setNotice("Saved with this club.");
       }}
@@ -219,6 +250,111 @@ function ClubForm({
             </button>
           ))}
         </div>
+      </fieldset>
+      <fieldset className="rounded-xl bg-slate-100 p-3">
+        <legend className="px-1 text-sm font-semibold text-slate-800">How you collect fees</legend>
+        <div className="mt-1 flex flex-wrap gap-2">
+          <button
+            type="button"
+            data-field="club-payment-bank"
+            aria-pressed={paymentMethod === "bank"}
+            onClick={() => setPaymentMethod("bank")}
+            className={`inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-bold ${
+              paymentMethod === "bank" ? "btn-shade" : "btn-quiet"
+            }`}
+          >
+            Bank transfer
+          </button>
+          <button
+            type="button"
+            data-field="club-payment-portal"
+            aria-pressed={paymentMethod === "portal"}
+            onClick={() => setPaymentMethod("portal")}
+            className={`inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-bold ${
+              paymentMethod === "portal" ? "btn-shade" : "btn-quiet"
+            }`}
+          >
+            Payment portal
+          </button>
+        </div>
+        {paymentMethod === "bank" ? (
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <label className="block text-sm font-semibold text-slate-800">
+              Bank
+              <input
+                value={bankName}
+                data-field="club-bank-name"
+                onChange={(event) => setBankName(event.target.value)}
+                className="mt-1 block h-11 w-full rounded-md border border-slate-300 px-3 text-base"
+              />
+            </label>
+            <label className="block text-sm font-semibold text-slate-800">
+              Account holder
+              <input
+                value={accountHolder}
+                data-field="club-bank-holder"
+                onChange={(event) => setAccountHolder(event.target.value)}
+                className="mt-1 block h-11 w-full rounded-md border border-slate-300 px-3 text-base"
+              />
+            </label>
+            <label className="block text-sm font-semibold text-slate-800">
+              Account number
+              <input
+                value={accountNumber}
+                data-field="club-bank-account"
+                inputMode="numeric"
+                onChange={(event) => setAccountNumber(event.target.value)}
+                className="mt-1 block h-11 w-full rounded-md border border-slate-300 px-3 text-base tabular-nums"
+              />
+            </label>
+            <label className="block text-sm font-semibold text-slate-800">
+              Branch code
+              <input
+                value={branchCode}
+                data-field="club-bank-branch"
+                inputMode="numeric"
+                onChange={(event) => setBranchCode(event.target.value)}
+                className="mt-1 block h-11 w-full rounded-md border border-slate-300 px-3 text-base tabular-nums"
+              />
+            </label>
+          </div>
+        ) : (
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <label className="block text-sm font-semibold text-slate-800">
+              Portal provider
+              <input
+                value={provider}
+                data-field="club-portal-provider"
+                placeholder="PayFast, Yoco, Ozow…"
+                onChange={(event) => setProvider(event.target.value)}
+                className="mt-1 block h-11 w-full rounded-md border border-slate-300 px-3 text-base"
+              />
+            </label>
+            <label className="block text-sm font-semibold text-slate-800">
+              Merchant reference
+              <input
+                value={portalReference}
+                data-field="club-portal-reference"
+                onChange={(event) => setPortalReference(event.target.value)}
+                className="mt-1 block h-11 w-full rounded-md border border-slate-300 px-3 text-base"
+              />
+            </label>
+            <label className="block text-sm font-semibold text-slate-800 sm:col-span-2">
+              Payment link
+              <input
+                type="url"
+                value={portalLink}
+                data-field="club-portal-link"
+                placeholder="https://"
+                onChange={(event) => setPortalLink(event.target.value)}
+                className="mt-1 block h-11 w-full rounded-md border border-slate-300 px-3 text-base"
+              />
+            </label>
+          </div>
+        )}
+        <p className="mt-2 text-xs font-medium text-slate-600">
+          These details print on guardian statements. Payments received are still recorded on Accounting.
+        </p>
       </fieldset>
       <button type="submit" className="btn-shade min-h-11 rounded-lg px-4 text-sm font-bold">
         {submitLabel}

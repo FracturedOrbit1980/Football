@@ -8,7 +8,7 @@ export default function PeoplePage() {
     <div>
       <PageHeader
         title="Registration"
-        description="Register every player and keep their details correct. The head coach allocates them to a team and league, then manages ratings and attendance."
+        description="Register every player with an ID and mobile, search the register by reference or name, and keep their correspondence history together. The head coach allocates them to a team and league, then manages ratings and attendance."
       />
       <PeopleBoard />
     </div>

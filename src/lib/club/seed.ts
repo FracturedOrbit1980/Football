@@ -3,6 +3,7 @@ import type { ClubAgeGroup, DrillTemplate, SetupDiagram } from "@/lib/club/catal
 import { DEFAULT_PITCH_COLOR, type DrillBoard } from "@/lib/club/board";
 import { mergeLibraryBoards } from "@/lib/club/library-boards";
 import { clubLibrary } from "@/lib/club/library";
+import { formatRegNumber, splitName } from "@/lib/club/registration";
 import { placeOnU12Prem, playerId, SQUAD_TEAM_ID, U12_SQUAD } from "@/lib/club/roster";
 
 export interface PaymentRecord {
@@ -11,9 +12,25 @@ export interface PaymentRecord {
   amount: number;
 }
 
+export const CORRESPONDENCE_CHANNELS = ["Call", "Email", "SMS", "Note"] as const;
+export type CorrespondenceChannel = "Registration" | "Print" | (typeof CORRESPONDENCE_CHANNELS)[number];
+
+export interface CorrespondenceEntry {
+  id: string;
+  date: string;
+  channel: CorrespondenceChannel;
+  summary: string;
+}
+
 export interface ClubPlayer {
   id: string;
   name: string;
+  firstName: string;
+  surname: string;
+  regNumber: string;
+  idNumber: string;
+  mobile: string;
+  correspondence: CorrespondenceEntry[];
   squadNumber: number;
   position: string;
   positions?: string[];
@@ -119,22 +136,31 @@ export interface ClubData {
 export function createSeed(): ClubData {
   const placed = placeOnU12Prem(
     ensureYouthAges([]),
-    U12_SQUAD.map((player) => ({
-      id: playerId(player.name),
-      name: player.name,
-      squadNumber: player.squadNumber,
-      position: "Central midfielder",
-      positions: [] as string[],
-      teamId: SQUAD_TEAM_ID,
-      homework: "",
-      photo: "",
-      seasonFee: 0,
-      feeDueDate: "",
-      payments: [],
-      guardianName: "",
-      guardianEmail: "",
-      accessPin: "",
-    })),
+    U12_SQUAD.map((player, index) => {
+      const { firstName, surname } = splitName(player.name);
+      return {
+        id: playerId(player.name),
+        name: player.name,
+        firstName,
+        surname,
+        regNumber: formatRegNumber(index + 1),
+        idNumber: "",
+        mobile: "",
+        correspondence: [],
+        squadNumber: player.squadNumber,
+        position: "Central midfielder",
+        positions: [] as string[],
+        teamId: SQUAD_TEAM_ID,
+        homework: "",
+        photo: "",
+        seasonFee: 0,
+        feeDueDate: "",
+        payments: [],
+        guardianName: "",
+        guardianEmail: "",
+        accessPin: "",
+      };
+    }),
   );
   return {
     clubKind: "bnfc",

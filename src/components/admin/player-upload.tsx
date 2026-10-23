@@ -23,7 +23,7 @@ export function PlayerUpload() {
       result.updated ? `Updated ${result.updated} ${result.updated === 1 ? "player" : "players"}` : "",
     ].filter(Boolean);
     const skipped = errors.length ? ` Skipped ${errors.length} ${errors.length === 1 ? "line" : "lines"}.` : "";
-    setNotice(`${summary.join(". ")}. Each one waits for the head coach to allocate them to a team.${skipped}`);
+    setNotice(`${summary.join(". ")}. Each one gets a registration reference and waits for the head coach to allocate them to a team.${skipped}`);
   }
 
   return (
@@ -36,7 +36,7 @@ export function PlayerUpload() {
     >
       <h2 className="text-lg font-bold text-slate-950">Upload a registration list</h2>
       <p className="text-sm font-medium text-slate-700">
-        Paste a list or choose a file. Each line is the player name and shirt number. New players are registered without a team, ready for the head coach.
+        Paste a list or choose a file. Each line is the player name and shirt number. New players get a registration reference but no team yet, ready for the head coach.
       </p>
       <textarea
         value={text}

@@ -9,6 +9,7 @@ import { isDrillLevel, isDrillType, isMoment, skillOf, withUefaDrills, youthAgeO
 import { DEFAULT_PITCH_COLOR, type DrillBoard } from "@/lib/club/board";
 import { mergeLibraryBoards } from "@/lib/club/library-boards";
 import { placeOnU12Prem, playerId, SQUAD_TEAM_ID, type RosterRow } from "@/lib/club/roster";
+import { ensureRegNumbers, joinName, nextRegNumber, normalizeIdentity, splitName } from "@/lib/club/registration";
 import { weekDates } from "@/lib/club/week";
 import { clubDataKey } from "@/lib/club/registry";
 import {
@@ -17,6 +18,8 @@ import {
   type AttendanceRecord,
   type ClubData,
   type ClubDrill,
+  type CorrespondenceChannel,
+  type CorrespondenceEntry,
   type EvaluationRecord,
   type SavedMatch,
   type SessionPlan,
@@ -47,7 +50,10 @@ export interface NewDrillInput {
 }
 
 export interface NewPlayerInput {
-  name: string;
+  firstName: string;
+  surname: string;
+  idNumber: string;
+  mobile: string;
   squadNumber: number;
   position: string;
   positions?: string[];
@@ -75,10 +81,11 @@ interface ClubState extends ClubData {
   openDivisionTeam: (ageGroupId: string, division: Division) => string;
   setTeamDivision: (teamId: string, division: Division) => void;
   setCoachTeam: (teamId: string) => void;
-  addPlayer: (input: NewPlayerInput) => void;
+  addPlayer: (input: NewPlayerInput) => string;
   importPlayers: (rows: RosterRow[]) => { added: number; updated: number };
-  updatePlayer: (playerId: string, input: { name: string; squadNumber: number; position: string; positions?: string[]; photo?: string }) => void;
+  updatePlayer: (playerId: string, input: { name: string; squadNumber: number; position: string; positions?: string[]; photo?: string; firstName?: string; surname?: string; idNumber?: string; mobile?: string }) => void;
   setPlayerPhoto: (playerId: string, photo: string) => void;
+  addCorrespondence: (playerId: string, channel: CorrespondenceChannel, summary: string) => void;
   assignPlayer: (playerId: string, teamId: string) => void;
   setPlayerAccount: (
     playerId: string,
@@ -129,6 +136,31 @@ interface ClubState extends ClubData {
 
 function todayLabel() {
   return new Date().toLocaleDateString("en-ZA", { day: "numeric", month: "short" });
+}
+
+const CORRESPONDENCE_CHANNELS = new Set<CorrespondenceChannel>([
+  "Registration",
+  "Print",
+  "Email",
+  "Call",
+  "SMS",
+  "Note",
+]);
+
+function normalizeCorrespondence(value: unknown): CorrespondenceEntry[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter((entry): entry is Partial<CorrespondenceEntry> => Boolean(entry))
+    .map((entry, index) => ({
+      id: typeof entry.id === "string" && entry.id ? entry.id : `corr-${index}`,
+      date: isIsoDate(entry.date) ? entry.date : todayIso(),
+      channel: CORRESPONDENCE_CHANNELS.has(entry.channel as CorrespondenceChannel)
+        ? (entry.channel as CorrespondenceChannel)
+        : "Note",
+      summary: typeof entry.summary === "string" ? entry.summary.trim().slice(0, 200) : "",
+    }))
+    .filter((entry) => entry.summary)
+    .sort((a, b) => b.date.localeCompare(a.date));
 }
 
 export const useClubStore = create<ClubState>()(
@@ -195,27 +227,50 @@ export const useClubStore = create<ClubState>()(
             drill.id === drillId ? { ...drill, videoUrl, videoName } : drill,
           ),
         })),
-      addPlayer: (input) =>
-        set((state) => ({
-          players: [
-            ...state.players,
-            {
-              id: `p-${Date.now()}`,
-              name: input.name,
-              squadNumber: input.squadNumber,
-              ...normalizePositions(input.position, input.positions),
-              teamId: input.teamId,
-              homework: "",
-              photo: input.photo ?? "",
-              seasonFee: 0,
-              feeDueDate: "",
-              payments: [],
-              guardianName: "",
-              guardianEmail: "",
-              accessPin: "",
-            },
-          ],
-        })),
+      addPlayer: (input) => {
+        let regNumber = "";
+        set((state) => {
+          const firstName = normalizeIdentity(input.firstName, 40);
+          const surname = normalizeIdentity(input.surname, 40);
+          const name = joinName(firstName, surname);
+          if (!name) return state;
+          regNumber = nextRegNumber(state.players);
+          return {
+            players: [
+              ...state.players,
+              {
+                id: `p-${Date.now()}`,
+                name,
+                firstName,
+                surname,
+                regNumber,
+                idNumber: normalizeIdentity(input.idNumber),
+                mobile: normalizeIdentity(input.mobile),
+                correspondence: [
+                  {
+                    id: `corr-${Date.now()}`,
+                    date: todayIso(),
+                    channel: "Registration",
+                    summary: `Registered and issued ${regNumber}.`,
+                  },
+                ],
+                squadNumber: input.squadNumber,
+                ...normalizePositions(input.position, input.positions),
+                teamId: input.teamId,
+                homework: "",
+                photo: input.photo ?? "",
+                seasonFee: 0,
+                feeDueDate: "",
+                payments: [],
+                guardianName: "",
+                guardianEmail: "",
+                accessPin: "",
+              },
+            ],
+          };
+        });
+        return regNumber;
+      },
       importPlayers: (rows) => {
         const players = [...get().players];
         let added = 0;
@@ -228,9 +283,24 @@ export const useClubStore = create<ClubState>()(
             updated += 1;
           } else {
             const id = playerId(name);
+            const { firstName, surname } = splitName(name);
+            const regNumber = nextRegNumber(players);
             players.push({
               id: players.some((player) => player.id === id) ? `${id}-${Date.now()}` : id,
               name,
+              firstName,
+              surname,
+              regNumber,
+              idNumber: "",
+              mobile: "",
+              correspondence: [
+                {
+                  id: `corr-${Date.now()}-${added}`,
+                  date: todayIso(),
+                  channel: "Registration",
+                  summary: `Added from the registration list as ${regNumber}.`,
+                },
+              ],
               squadNumber: row.squadNumber,
               position: "Central midfielder",
               positions: [],
@@ -252,22 +322,58 @@ export const useClubStore = create<ClubState>()(
       },
       updatePlayer: (playerId, input) =>
         set((state) => ({
-          players: state.players.map((player) =>
-            player.id === playerId
-              ? {
-                  ...player,
-                  name: input.name,
-                  squadNumber: input.squadNumber,
-                  ...normalizePositions(input.position, input.positions),
-                  ...(input.photo !== undefined ? { photo: input.photo } : {}),
-                }
-              : player,
-          ),
+          players: state.players.map((player) => {
+            if (player.id !== playerId) return player;
+            let firstName = player.firstName ?? "";
+            let surname = player.surname ?? "";
+            let name = input.name.trim() || player.name;
+            if (input.firstName !== undefined || input.surname !== undefined) {
+              firstName = normalizeIdentity(input.firstName ?? player.firstName, 40);
+              surname = normalizeIdentity(input.surname ?? player.surname, 40);
+              name = joinName(firstName, surname) || name;
+            } else if (name !== player.name) {
+              ({ firstName, surname } = splitName(name));
+            }
+            return {
+              ...player,
+              name,
+              firstName,
+              surname,
+              squadNumber: input.squadNumber,
+              ...normalizePositions(input.position, input.positions),
+              ...(input.photo !== undefined ? { photo: input.photo } : {}),
+              ...(input.idNumber !== undefined ? { idNumber: normalizeIdentity(input.idNumber) } : {}),
+              ...(input.mobile !== undefined ? { mobile: normalizeIdentity(input.mobile) } : {}),
+            };
+          }),
         })),
       setPlayerPhoto: (playerId, photo) =>
         set((state) => ({
           players: state.players.map((player) => (player.id === playerId ? { ...player, photo } : player)),
         })),
+      addCorrespondence: (playerId, channel, summary) =>
+        set((state) => {
+          const text = summary.trim().replace(/\s+/g, " ").slice(0, 200);
+          if (!text) return state;
+          return {
+            players: state.players.map((player) =>
+              player.id === playerId
+                ? {
+                    ...player,
+                    correspondence: [
+                      {
+                        id: `corr-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+                        date: todayIso(),
+                        channel,
+                        summary: text,
+                      },
+                      ...player.correspondence,
+                    ],
+                  }
+                : player,
+            ),
+          };
+        }),
       assignPlayer: (playerId, teamId) =>
         set((state) => ({
           players: state.players.map((player) => (player.id === playerId ? { ...player, teamId } : player)),
@@ -608,7 +714,7 @@ export const useClubStore = create<ClubState>()(
             division: canonicalDivision(team.division) ?? canonicalDivision(team.name),
           })),
         }));
-        const players = (useSquad ? baseline.players : savedPlayers).map((player) => {
+        const normalizedPlayers = (useSquad ? baseline.players : savedPlayers).map((player) => {
           const next = { ...player } as typeof player & { dateOfBirth?: string; feePaid?: number };
           delete next.dateOfBirth;
           const legacyPaid =
@@ -634,8 +740,19 @@ export const useClubStore = create<ClubState>()(
                   },
                 ]
               : [];
+          const rawName = typeof player.name === "string" ? player.name.trim().replace(/\s+/g, " ") : "";
+          const fallback = splitName(rawName);
+          const firstName = normalizeIdentity(player.firstName, 40) || fallback.firstName;
+          const surname = normalizeIdentity(player.surname, 40) || fallback.surname;
           return {
             ...next,
+            name: joinName(firstName, surname) || rawName,
+            firstName,
+            surname,
+            regNumber: typeof player.regNumber === "string" ? player.regNumber.trim().toUpperCase() : "",
+            idNumber: normalizeIdentity(player.idNumber),
+            mobile: normalizeIdentity(player.mobile),
+            correspondence: normalizeCorrespondence(player.correspondence),
             ...normalizePositions(player.position, player.positions),
             photo: typeof player.photo === "string" ? player.photo : "",
             seasonFee:
@@ -650,6 +767,7 @@ export const useClubStore = create<ClubState>()(
               typeof player.accessPin === "string" ? player.accessPin.replace(/\D/g, "").slice(0, 4) : "",
           };
         });
+        const players = ensureRegNumbers(normalizedPlayers);
         const placed = placeOnU12Prem(ageGroups, players);
         const previousTeam = saved.coachTeamId ?? null;
         const previousGroup = placed.ageGroups.find((group) => group.teams.some((team) => team.id === previousTeam));

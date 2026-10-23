@@ -5,11 +5,12 @@ import { create } from "zustand";
 import {
   DEFAULT_CLUB_ID,
   clubDataKey,
+  normalizePaymentDetails,
   readRegistry,
   writeRegistry,
+  type ClubInput,
   type ClubProfile,
 } from "@/lib/club/registry";
-import type { ClubThemeId } from "@/lib/club/themes";
 import { loadClubData, useClubStore } from "@/stores/club-store";
 
 interface LibraryState {
@@ -18,8 +19,8 @@ interface LibraryState {
   ready: boolean;
   refresh: () => void;
   load: (id: string) => Promise<void>;
-  addClub: (input: { name: string; logo: string; theme: ClubThemeId }) => Promise<void>;
-  updateClub: (id: string, input: { name: string; logo: string; theme: ClubThemeId }) => void;
+  addClub: (input: ClubInput) => Promise<void>;
+  updateClub: (id: string, input: ClubInput) => void;
   deleteClub: (id: string) => void;
 }
 
@@ -55,6 +56,7 @@ export const useClubLibrary = create<LibraryState>((set, get) => ({
       logo: input.logo,
       theme: input.theme,
       kind: "custom",
+      ...normalizePaymentDetails(input),
     };
     const clubs = [...get().clubs, club];
     useClubStore.setState({ hydrated: false });
@@ -65,7 +67,9 @@ export const useClubLibrary = create<LibraryState>((set, get) => ({
     const name = input.name.trim();
     if (!name) return;
     const clubs = get().clubs.map((club) =>
-      club.id === id ? { ...club, name, logo: input.logo, theme: input.theme } : club,
+      club.id === id
+        ? { ...club, name, logo: input.logo, theme: input.theme, ...normalizePaymentDetails(input) }
+        : club,
     );
     save(clubs, get().activeId);
     set({ clubs });

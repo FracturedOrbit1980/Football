@@ -6,6 +6,7 @@ import { PlayerPortrait } from "@/components/club/player-photo";
 import { Button } from "@/components/ui/button";
 import { ageAnalysis, bucketOf, creditOf, daysOverdue, isIsoDate, outstandingOf, paidTotal, rand, todayIso, AGE_BUCKETS } from "@/lib/club/accounting";
 import { ageLabel, ensureYouthAges } from "@/lib/club/age";
+import { paymentDetailsLines } from "@/lib/club/registry";
 import type { ClubPlayer, PaymentRecord } from "@/lib/club/seed";
 import { formatDay } from "@/lib/club/week";
 import { useClubStore } from "@/stores/club-store";
@@ -59,6 +60,7 @@ export function AccountingBoard() {
   );
   const awaiting = visible.filter((player) => player.seasonFee > 0 && outstandingOf(player) > 0).length;
   const ageing = ageAnalysis(visible);
+  const paymentLines = club ? paymentDetailsLines(club) : [];
 
   return (
     <div className="space-y-6">
@@ -128,6 +130,7 @@ export function AccountingBoard() {
                 player={player}
                 clubName={clubName}
                 teamLabel={teams.find((team) => team.id === player.teamId)?.label ?? "Not on a team yet"}
+                paymentLines={paymentLines}
               />
             ))}
           </ul>
@@ -146,7 +149,17 @@ function Total({ label, value, emphasis = false }: { label: string; value: strin
   );
 }
 
-function AccountRow({ player, clubName, teamLabel }: { player: ClubPlayer; clubName: string; teamLabel: string }) {
+function AccountRow({
+  player,
+  clubName,
+  teamLabel,
+  paymentLines,
+}: {
+  player: ClubPlayer;
+  clubName: string;
+  teamLabel: string;
+  paymentLines: string[];
+}) {
   const setPlayerAccount = useClubStore((state) => state.setPlayerAccount);
   const [fee, setFee] = useState(String(player.seasonFee));
   const [dueDate, setDueDate] = useState(player.feeDueDate);
@@ -174,7 +187,9 @@ function AccountRow({ player, clubName, teamLabel }: { player: ClubPlayer; clubN
             <p className="text-base font-bold text-slate-950">
               {player.squadNumber} {player.name}
             </p>
-            <p className="text-sm font-medium text-slate-600">{teamLabel}</p>
+            <p className="text-sm font-medium text-slate-600">
+              {player.regNumber} · {teamLabel}
+            </p>
           </div>
         </div>
         <span className={`w-fit shrink-0 rounded-full px-3 py-1 text-xs font-bold ${STATUS_STYLE[status]}`}>
@@ -288,7 +303,7 @@ function AccountRow({ player, clubName, teamLabel }: { player: ClubPlayer; clubN
         </Button>
       </div>
       {open ? (
-        <StatementPanel player={player} clubName={clubName} teamLabel={teamLabel} guardianName={guardianName} />
+        <StatementPanel player={player} clubName={clubName} teamLabel={teamLabel} guardianName={guardianName} paymentLines={paymentLines} />
       ) : null}
     </li>
   );
@@ -299,14 +314,17 @@ function StatementPanel({
   clubName,
   teamLabel,
   guardianName,
+  paymentLines,
 }: {
   player: ClubPlayer;
   clubName: string;
   teamLabel: string;
   guardianName: string;
+  paymentLines: string[];
 }) {
   const recordPayment = useClubStore((state) => state.recordPayment);
   const removePayment = useClubStore((state) => state.removePayment);
+  const addCorrespondence = useClubStore((state) => state.addCorrespondence);
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(todayIso());
   const [notice, setNotice] = useState("");
@@ -318,7 +336,7 @@ function StatementPanel({
   const payments = [...player.payments].sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id));
   const balanceLine = statementBalanceLine(player);
   const subject = `Statement of account — ${player.name}`;
-  const body = statementText(player, clubName, teamLabel, guardianName || player.guardianName);
+  const body = statementText(player, clubName, teamLabel, guardianName || player.guardianName, paymentLines);
   const mailto = player.guardianEmail
     ? `mailto:${player.guardianEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
     : "";
@@ -427,21 +445,44 @@ function StatementPanel({
           ) : null}
         </dl>
         <p className="mt-2 text-sm font-medium text-slate-700">{balanceLine}</p>
+        {paymentLines.length > 0 ? (
+          <div className="mt-2 rounded-lg bg-white p-3 text-sm ring-1 ring-slate-300" data-statement-pay>
+            <p className="font-bold text-slate-900">How to pay</p>
+            {paymentLines.map((line) => (
+              <p key={line} className="text-slate-700">
+                {line}
+              </p>
+            ))}
+            {player.regNumber ? <p className="font-semibold text-slate-900">Reference: {player.regNumber}</p> : null}
+          </div>
+        ) : null}
         <div className="mt-3 flex flex-wrap gap-2">
           <Button
             type="button"
             size="lg"
             className="h-11"
             onClick={() => {
-              const printed = printStatement(player, clubName, teamLabel, guardianName || player.guardianName);
-              if (!printed) setError("Allow pop-ups to print the statement.");
+              const printed = printStatement(player, clubName, teamLabel, guardianName || player.guardianName, paymentLines);
+              if (printed) {
+                addCorrespondence(player.id, "Print", `Statement printed for ${guardianName || player.guardianName || "the guardian"}.`);
+                setNotice("Statement printed and added to correspondence.");
+              } else {
+                setError("Allow pop-ups to print the statement.");
+              }
             }}
           >
             Print statement
           </Button>
           {mailto ? (
             <Button asChild size="lg" variant="outline" className="h-11">
-              <a href={mailto} data-field="email-guardian">
+              <a
+                href={mailto}
+                data-field="email-guardian"
+                onClick={() => {
+                  addCorrespondence(player.id, "Email", `Statement opened in the mail app for ${player.guardianEmail}.`);
+                  setNotice("Mail app opened and the statement added to correspondence.");
+                }}
+              >
                 Email guardian
               </a>
             </Button>
@@ -481,12 +522,19 @@ function statementBalanceLine(player: ClubPlayer) {
   return `A balance of ${rand(outstanding)} is ${days} ${days === 1 ? "day" : "days"} overdue (${bucketOf(days)}).`;
 }
 
-function statementText(player: ClubPlayer, clubName: string, teamLabel: string, guardian: string) {
+function statementText(
+  player: ClubPlayer,
+  clubName: string,
+  teamLabel: string,
+  guardian: string,
+  paymentLines: string[],
+) {
   const payments = [...player.payments].sort((a, b) => a.date.localeCompare(b.date));
   const lines = [
     clubName,
     `Statement of account — ${player.name}`,
     "",
+    `Registration: ${player.regNumber}`,
     `Guardian: ${guardian || "Not recorded"}`,
     `Team: ${teamLabel}`,
     `Statement date: ${formatDay(todayIso())}`,
@@ -502,22 +550,42 @@ function statementText(player: ClubPlayer, clubName: string, teamLabel: string, 
     `Balance outstanding: ${rand(outstandingOf(player))}`,
     statementBalanceLine(player),
     "",
+    ...(paymentLines.length
+      ? [
+          "How to pay:",
+          ...paymentLines.map((line) => `  ${line}`),
+          ...(player.regNumber ? [`  Reference: ${player.regNumber}`] : []),
+          "",
+        ]
+      : []),
     "Please contact the club if you have any questions about this statement.",
   ];
   return lines.join("\n");
 }
 
-function printStatement(player: ClubPlayer, clubName: string, teamLabel: string, guardian: string) {
+function printStatement(
+  player: ClubPlayer,
+  clubName: string,
+  teamLabel: string,
+  guardian: string,
+  paymentLines: string[],
+) {
   const win = window.open("", "_blank", "width=760,height=900");
   if (!win) return false;
-  win.document.write(statementHtml(player, clubName, teamLabel, guardian));
+  win.document.write(statementHtml(player, clubName, teamLabel, guardian, paymentLines));
   win.document.close();
   win.focus();
   window.setTimeout(() => win.print(), 250);
   return true;
 }
 
-function statementHtml(player: ClubPlayer, clubName: string, teamLabel: string, guardian: string) {
+function statementHtml(
+  player: ClubPlayer,
+  clubName: string,
+  teamLabel: string,
+  guardian: string,
+  paymentLines: string[],
+) {
   const payments = [...player.payments].sort((a, b) => a.date.localeCompare(b.date));
   const rows = [
     `<tr><td>${player.feeDueDate ? escapeHtml(formatDay(player.feeDueDate)) : "—"}</td><td>Season registration fee</td><td class="num">${escapeHtml(rand(player.seasonFee))}</td></tr>`,
@@ -528,6 +596,12 @@ function statementHtml(player: ClubPlayer, clubName: string, teamLabel: string, 
   ].join("");
   const balanceLabel = creditOf(player) > 0 ? "In credit" : "Outstanding";
   const balanceAmount = creditOf(player) > 0 ? rand(creditOf(player)) : rand(outstandingOf(player));
+  const payBlock =
+    paymentLines.length > 0
+      ? `<div class="pay"><h2>How to pay</h2>${paymentLines
+          .map((line) => `<p>${escapeHtml(line)}</p>`)
+          .join("")}${player.regNumber ? `<p class="ref">Reference: ${escapeHtml(player.regNumber)}</p>` : ""}</div>`
+      : "";
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -547,6 +621,10 @@ function statementHtml(player: ClubPlayer, clubName: string, teamLabel: string, 
   .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .total td { border-top: 2px solid #0b1b33; border-bottom: none; font-weight: 800; font-size: 15px; }
   .note { margin-top: 20px; padding: 12px; background: #f8fafc; border-left: 4px solid #0f766e; font-size: 14px; }
+  .pay { margin-top: 20px; padding: 12px; background: #f1f5f9; border-left: 4px solid #0b1b33; font-size: 14px; }
+  .pay h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; margin: 0 0 6px; }
+  .pay p { margin: 2px 0; }
+  .pay .ref { margin-top: 8px; font-weight: 800; }
   footer { margin-top: 28px; font-size: 12px; color: #64748b; }
   @media print { body { margin: 16mm; } }
 </style>
@@ -558,6 +636,7 @@ function statementHtml(player: ClubPlayer, clubName: string, teamLabel: string, 
 </header>
 <dl class="meta">
   <div><dt>Player</dt><dd>${escapeHtml(player.name)}</dd></div>
+  <div><dt>Registration</dt><dd>${escapeHtml(player.regNumber || "—")}</dd></div>
   <div><dt>Guardian</dt><dd>${escapeHtml(guardian || "Not recorded")}</dd></div>
   <div><dt>Team</dt><dd>${escapeHtml(teamLabel)}</dd></div>
   <div><dt>Statement date</dt><dd>${escapeHtml(formatDay(todayIso()))}</dd></div>
@@ -569,6 +648,7 @@ function statementHtml(player: ClubPlayer, clubName: string, teamLabel: string, 
     <tr class="total"><td colspan="2">${escapeHtml(balanceLabel)}</td><td class="num">${escapeHtml(balanceAmount)}</td></tr>
   </tbody>
 </table>
+${payBlock}
 <p class="note">${escapeHtml(statementBalanceLine(player))}</p>
 <footer>${escapeHtml(clubName)} · Statement generated ${escapeHtml(formatDay(todayIso()))}. Please contact the club if you have any questions.</footer>
 </body>
