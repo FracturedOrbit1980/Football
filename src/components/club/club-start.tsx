@@ -32,7 +32,12 @@ export function ClubStart() {
       </p>
       <div className="mt-8 grid gap-4" data-club-list>
         {clubs.map((club) => (
-          <article key={club.id} className="rounded-2xl bg-white p-5 ring-1 ring-slate-300 sm:p-6" data-club={club.id}>
+          <article
+            key={club.id}
+            className="rounded-2xl bg-white p-5 ring-1 ring-slate-300 sm:p-6"
+            data-club={club.id}
+            data-club-active={club.id === activeId ? "true" : undefined}
+          >
             <div className="flex flex-wrap items-center gap-3">
               <ClubLogo club={club} />
               <div className="min-w-0 flex-1 basis-40">

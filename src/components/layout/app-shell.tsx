@@ -140,10 +140,10 @@ function ClubMark({ club }: { club: ReturnType<typeof activeClub> }) {
   const src = club?.logo || (club?.id === DEFAULT_CLUB_ID ? `${base}/icons/clubstride-symbol.png` : "");
   if (!src) {
     return (
-      <span className="grid size-10 shrink-0 place-items-center rounded-full bg-emerald-500 text-xs font-black text-white">
+      <span className="club-mark grid size-10 shrink-0 place-items-center rounded-full bg-emerald-500 text-xs font-black text-white">
         {(club?.name ?? "C").slice(0, 1).toUpperCase()}
       </span>
     );
   }
-  return <img src={src} alt="" width={40} height={40} className="size-10 shrink-0 rounded-full bg-white object-contain" />;
+  return <img src={src} alt="" width={40} height={40} className="club-mark size-10 shrink-0 rounded-full bg-white object-contain" />;
 }

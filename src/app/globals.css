@@ -398,6 +398,9 @@ html.dark {
   --color-slate-800: #e6ebf1;
   --color-slate-900: #f2f5f9;
   --color-slate-950: #ffffff;
+  /* Clubstride neon glow. Channel triples so rules can vary the alpha. */
+  --cs-glow-teal: 45 212 191;
+  --cs-glow-volt: 200 242 48;
 }
 
 .app-chrome {
@@ -557,6 +560,42 @@ a.btn-shade:active {
 .btn-danger:focus-visible {
   outline: 2px solid #c62828;
   outline-offset: 2px;
+}
+
+/* Clubstride neon glow — dark mode only, so pitch-side daylight screens stay flat. */
+html.dark .btn-shade {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.28), 0 1px 2px rgb(11 27 51 / 0.12),
+    0 0 18px -4px rgb(var(--cs-glow-teal) / 0.55);
+}
+
+html.dark .btn-shade:hover:not(:disabled) {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.4), 0 2px 4px rgb(11 27 51 / 0.12),
+    0 0 26px -2px rgb(var(--cs-glow-teal) / 0.72);
+}
+
+html.dark .btn-danger {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.22), 0 1px 2px rgb(11 27 51 / 0.12),
+    0 0 16px -4px rgb(198 40 40 / 0.75);
+}
+
+html.dark .btn-shade:focus-visible,
+html.dark .btn-quiet:focus-visible,
+html.dark .btn-chrome:focus-visible {
+  outline-color: #2dd4bf;
+  box-shadow: 0 0 0 4px rgb(var(--cs-glow-teal) / 0.25), 0 0 16px -2px rgb(var(--cs-glow-teal) / 0.6);
+}
+
+html.dark .club-mark {
+  box-shadow: 0 0 14px -2px rgb(var(--cs-glow-volt) / 0.55);
+}
+
+html.dark [data-club-active="true"] {
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.22), 0 0 22px -6px rgb(var(--cs-glow-teal) / 0.5);
+}
+
+html.dark .recharts-radar-polygon,
+html.dark .recharts-line-curve {
+  filter: drop-shadow(0 0 6px rgb(var(--cs-glow-teal) / 0.55));
 }
 
 select.btn-quiet,
