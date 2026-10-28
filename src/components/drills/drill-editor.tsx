@@ -181,6 +181,7 @@ function DrillEditorForm({ requestedId }: { requestedId: string | null }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draft, setDraft] = useState<PitchPoint[] | null>(null);
   const [playing, setPlaying] = useState((initial?.board.frames.length ?? 0) > 1);
+  const [confirmClear, setConfirmClear] = useState(false);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const dragId = useRef<string | null>(null);
   const dragRecorded = useRef(false);
@@ -311,7 +312,15 @@ function DrillEditorForm({ requestedId }: { requestedId: string | null }) {
   }
 
   function clearSlide() {
-    if (shown.pieces.length === 0 && shown.marks.length === 0) return;
+    if (shown.pieces.length === 0 && shown.marks.length === 0) {
+      setConfirmClear(false);
+      return;
+    }
+    if (!confirmClear) {
+      setConfirmClear(true);
+      return;
+    }
+    setConfirmClear(false);
     remember();
     const index = safeIndex;
     setBoard((current) => ({
@@ -728,9 +737,9 @@ function DrillEditorForm({ requestedId }: { requestedId: string | null }) {
               type="button"
               data-clear-slide
               onClick={clearSlide}
-              className="btn-quiet min-h-11 rounded-md px-4 text-sm font-bold"
+              className={`${confirmClear ? "btn-danger" : "btn-quiet"} min-h-11 rounded-md px-4 text-sm font-bold`}
             >
-              Clear
+              {confirmClear ? "Confirm clear" : "Clear"}
             </button>
           </div>
           <input

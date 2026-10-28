@@ -408,6 +408,22 @@ html.dark {
   color: #f2f5f9;
 }
 
+/* Solid ink so a confirm bar stays readable on glass cards and on the dark match clock. */
+.confirm-bar {
+  background: #f2f5f9;
+  color: #0b1b33;
+}
+
+html.dark .confirm-bar {
+  background: #18253a;
+  color: #f2f5f9;
+}
+
+.ink-panel .confirm-bar {
+  background: #f2f5f9;
+  color: #0b1b33;
+}
+
 .ink-panel {
   --color-slate-50: #f8fafc;
   --color-slate-100: #f1f5f9;
@@ -450,8 +466,32 @@ html.dark .editor-descriptions {
 }
 
 html.dark .text-emerald-700,
-html.dark .text-emerald-800 {
-  color: #2dd4bf;
+html.dark .text-emerald-800,
+html.dark .text-emerald-900 {
+  color: #5eead4;
+}
+
+html.dark .text-rose-700,
+html.dark .text-rose-800,
+html.dark .text-rose-900 {
+  color: #fda4af;
+}
+
+/* Tinted status chips stay readable when slate text is remapped to light ink. */
+html.dark .bg-emerald-50 {
+  background-color: rgb(15 118 110 / 0.22);
+}
+
+html.dark .bg-emerald-100 {
+  background-color: rgb(15 118 110 / 0.32);
+}
+
+html.dark .bg-rose-100 {
+  background-color: rgb(190 18 60 / 0.28);
+}
+
+html.dark .bg-amber-100 {
+  background-color: rgb(180 83 9 / 0.28);
 }
 
 .btn-shade,

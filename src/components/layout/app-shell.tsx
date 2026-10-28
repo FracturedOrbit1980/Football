@@ -21,25 +21,25 @@ import { ROLE_HOME, ROLE_LABEL, type UserRole } from "@/lib/auth/roles";
 import { DEFAULT_CLUB_ID } from "@/lib/club/registry";
 import { activeClub, useClubLibrary } from "@/stores/club-library";
 
-const ADMIN_NAV: { href: string; label: string; icon: typeof Users }[] = [
-  { href: "/admin", label: "Club", icon: LayoutDashboard },
-  { href: "/admin/people", label: "People", icon: Users },
-  { href: "/admin/members", label: "Members", icon: ContactRound },
-  { href: "/admin/accounting", label: "Accounting", icon: Wallet },
-  { href: "/admin/drills", label: "Drills", icon: Library },
+const ADMIN_NAV: { href: string; label: string; short: string; icon: typeof Users }[] = [
+  { href: "/admin", label: "Club", short: "Club", icon: LayoutDashboard },
+  { href: "/admin/people", label: "People", short: "People", icon: Users },
+  { href: "/admin/members", label: "Members", short: "Members", icon: ContactRound },
+  { href: "/admin/accounting", label: "Accounting", short: "Fees", icon: Wallet },
+  { href: "/admin/drills", label: "Drills", short: "Drills", icon: Library },
 ];
 
-const NAV: Record<UserRole, { href: string; label: string; icon: typeof Users }[]> = {
+const NAV: Record<UserRole, { href: string; label: string; short: string; icon: typeof Users }[]> = {
   DEVELOPER: ADMIN_NAV,
   SUPER_ADMIN: ADMIN_NAV,
   HEAD_COACH: [
-    { href: "/coach", label: "Home", icon: LayoutDashboard },
-    { href: "/coach/roster", label: "Squad", icon: Users },
-    { href: "/coach/drills", label: "Drills", icon: ClipboardList },
-    { href: "/coach/editor", label: "Editor", icon: Pencil },
-    { href: "/coach/match", label: "Match", icon: Timer },
+    { href: "/coach", label: "Home", short: "Home", icon: LayoutDashboard },
+    { href: "/coach/roster", label: "Squad", short: "Squad", icon: Users },
+    { href: "/coach/drills", label: "Drills", short: "Drills", icon: ClipboardList },
+    { href: "/coach/editor", label: "Editor", short: "Editor", icon: Pencil },
+    { href: "/coach/match", label: "Match", short: "Match", icon: Timer },
   ],
-  PLAYER: [{ href: "/player", label: "My game", icon: Users }],
+  PLAYER: [{ href: "/player", label: "My game", short: "My game", icon: Users }],
 };
 
 function stripSlash(path: string) {
@@ -130,12 +130,15 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-      <main className="px-4 pb-32 pt-24 sm:px-6 md:pb-12 md:pl-72 md:pr-10 md:pt-10">
+      <main className="px-4 pb-[calc(8.5rem+env(safe-area-inset-bottom))] pt-24 sm:px-6 md:pb-12 md:pl-72 md:pr-10 md:pt-10">
         <div className="mx-auto w-full max-w-[76rem]">{children}</div>
       </main>
 
       {items.length > 0 ? (
-        <nav className="app-chrome fixed inset-x-0 bottom-0 z-30 grid border-t border-white/10 md:hidden" style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}>
+        <nav
+          className="app-chrome fixed inset-x-0 bottom-0 z-30 grid border-t border-white/10 pb-[env(safe-area-inset-bottom)] md:hidden"
+          style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}
+        >
           {items.map((item) => {
             const Icon = item.icon;
             const active = isActive(pathname, item.href);
@@ -143,12 +146,13 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex min-h-16 flex-col items-center justify-center gap-1 text-xs font-bold ${
+                aria-label={item.label}
+                className={`flex min-h-16 flex-col items-center justify-center gap-0.5 px-1 text-center text-[11px] font-bold leading-tight ${
                   active ? "text-emerald-300" : "text-white/75"
                 }`}
               >
                 <Icon className="size-5" />
-                {item.label}
+                {item.short}
               </Link>
             );
           })}

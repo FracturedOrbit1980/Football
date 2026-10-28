@@ -12,6 +12,7 @@ import { paymentDetailsLines } from "@/lib/club/registry";
 import { searchPlayers } from "@/lib/club/registration";
 import type { ClubPlayer } from "@/lib/club/seed";
 import { printReminder, printReminders, printStatement, reminderTitle, statementBalanceLine, statementMailto, type ReminderEntry, type StatementContext } from "@/lib/club/statement";
+import { DateField } from "@/components/club/date-field";
 import { formatDay } from "@/lib/club/week";
 import { useClubStore } from "@/stores/club-store";
 import { activeClub, useClubLibrary } from "@/stores/club-library";
@@ -260,7 +261,7 @@ export function AccountingBoard() {
             {bucket ? `Filtered to ${bucket}. ` : ""}
             {totals.sponsored > 0 ? `Club sponsorship covers ${rand(totals.sponsored)} of these fees. ` : ""}
             {bucket ? (
-              <button type="button" data-clear-bucket onClick={() => setBucket("")} className="font-bold text-emerald-700 underline">
+              <button type="button" data-clear-bucket onClick={() => setBucket("")} className="inline-flex min-h-11 items-center font-bold text-emerald-700 underline">
                 Show every account
               </button>
             ) : null}
@@ -568,12 +569,11 @@ function AccountRow({
             </label>
             <label className="block text-sm font-semibold text-slate-800">
               Due date
-              <input
-                type="date"
+              <DateField
                 value={dueDate}
                 data-field={`due-${player.id}`}
-                onChange={(event) => {
-                  setDueDate(event.target.value);
+                onChange={(next) => {
+                  setDueDate(next);
                   setSaved("");
                 }}
                 className="mt-1 block h-11 w-full rounded-md border border-slate-300 px-3 text-base"
@@ -736,11 +736,10 @@ function StatementPanel({
           </label>
           <label className="block text-sm font-semibold text-slate-800">
             Date received
-            <input
-              type="date"
+            <DateField
               value={date}
               data-field="payment-date"
-              onChange={(event) => setDate(event.target.value)}
+              onChange={setDate}
               className="mt-1 block h-11 rounded-md border border-slate-300 px-3 text-base"
             />
           </label>

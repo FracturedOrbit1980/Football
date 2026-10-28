@@ -63,6 +63,7 @@ function DrillBoardEditor({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draft, setDraft] = useState<PitchPoint[] | null>(null);
   const [playing, setPlaying] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const dragId = useRef<string | null>(null);
   const idRef = useRef(1);
@@ -132,7 +133,15 @@ function DrillBoardEditor({
   }
 
   function clearSlide() {
-    if (shown.pieces.length === 0 && shown.marks.length === 0) return;
+    if (shown.pieces.length === 0 && shown.marks.length === 0) {
+      setConfirmClear(false);
+      return;
+    }
+    if (!confirmClear) {
+      setConfirmClear(true);
+      return;
+    }
+    setConfirmClear(false);
     updateFrame([], []);
     setSelectedId(null);
     setPlaying(false);
@@ -299,8 +308,8 @@ function DrillBoardEditor({
           <Chip active={false} onClick={recordFrame}>
             Record
           </Chip>
-          <Chip active={false} onClick={clearSlide}>
-            Clear
+          <Chip active={confirmClear} onClick={clearSlide}>
+            {confirmClear ? "Confirm clear" : "Clear"}
           </Chip>
           <Chip
             active={playing}

@@ -152,7 +152,7 @@ export function DrillLibrary({
                   <Button
                     type="button"
                     variant="outline"
-                    className="mt-3 h-10"
+                    className="mt-3 h-11"
                     onClick={() => setDrillOfficial(selected.id, !selected.isClubOfficial)}
                   >
                     {selected.isClubOfficial ? "Remove official flag" : "Mark as official"}

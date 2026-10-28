@@ -2,10 +2,13 @@
 
 import { useState } from "react";
 
+import Link from "next/link";
+
 import { DrillBoard } from "@/components/drills/drill-board";
 import { DrillStopwatch } from "@/components/drills/drill-stopwatch";
 import { Button } from "@/components/ui/button";
 import { useCoachTeam } from "@/components/coach/team-picker";
+import { formatDate } from "@/lib/club/week";
 import { useClubStore } from "@/stores/club-store";
 
 export function SessionPlanner() {
@@ -18,12 +21,19 @@ export function SessionPlanner() {
   const [title, setTitle] = useState("");
   const [activeId, setActiveId] = useState("");
   const [saved, setSaved] = useState(false);
+  const [query, setQuery] = useState("");
 
   const chosen = picked
     .map((id) => drills.find((drill) => drill.id === id))
     .filter((drill) => drill !== undefined);
   const totalSeconds = chosen.reduce((sum, drill) => sum + drill.durationSeconds, 0);
   const active = drills.find((drill) => drill.id === activeId) ?? chosen[0];
+  const needle = query.trim().toLowerCase();
+  const matches = needle
+    ? drills
+        .filter((drill) => `${drill.title} ${drill.focus} ${drill.playerSetup}`.toLowerCase().includes(needle))
+        .slice(0, 12)
+    : [];
 
   function toggle(id: string) {
     setPicked((current) => {
@@ -37,20 +47,62 @@ export function SessionPlanner() {
   return (
     <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_24rem]">
       <div>
-        <div className="flex flex-wrap gap-2">
-          {drills.map((drill) => {
-            const on = picked.includes(drill.id);
-            return (
-              <button
-                key={drill.id}
-                type="button"
-                onClick={() => toggle(drill.id)}
-                className={`rounded-full px-3 py-2 text-sm font-semibold ${on ? "btn-shade" : "btn-quiet"}`}
-              >
-                {drill.title}
-              </button>
-            );
-          })}
+        <div className="space-y-3">
+          <p className="text-sm font-semibold text-slate-800">
+            {chosen.length === 0 ? "No drills in this session yet." : `${chosen.length} in this session`}
+          </p>
+          {chosen.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {chosen.map((drill) => (
+                <button
+                  key={drill.id}
+                  type="button"
+                  onClick={() => toggle(drill.id)}
+                  className="btn-shade min-h-11 rounded-full px-3 text-sm font-semibold"
+                >
+                  {drill.title}
+                  <span className="sr-only">. Remove from session</span>
+                </button>
+              ))}
+            </div>
+          ) : null}
+          <label className="block text-sm font-semibold text-slate-800">
+            Add a drill
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search by name"
+              className="mt-1 block h-11 w-full max-w-md rounded-md border border-slate-300 px-3 text-base"
+            />
+          </label>
+          {needle ? (
+            matches.length === 0 ? (
+              <p className="text-sm font-medium text-slate-600">No drills match that search.</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {matches.map((drill) => (
+                  <button
+                    key={drill.id}
+                    type="button"
+                    onClick={() => toggle(drill.id)}
+                    className={`min-h-11 rounded-full px-3 text-sm font-semibold ${
+                      picked.includes(drill.id) ? "btn-shade" : "btn-quiet"
+                    }`}
+                  >
+                    {drill.title}
+                  </button>
+                ))}
+              </div>
+            )
+          ) : (
+            <p className="text-sm font-medium text-slate-600">
+              Search by name to add a drill. The full library, with age and skill filters, is on Drills.
+            </p>
+          )}
+          <Link href="/coach/drills" className="btn-quiet inline-flex min-h-11 items-center rounded-lg px-4 text-sm font-bold">
+            Open drill library
+          </Link>
         </div>
         <form
           className="mt-4 flex flex-wrap items-end gap-3"
@@ -87,7 +139,7 @@ export function SessionPlanner() {
                 >
                   <span className="block font-semibold text-slate-950">{session.title}</span>
                   <span className="text-sm text-slate-600">
-                    {session.savedOn} · {session.drillIds.length} drills
+                    {formatDate(session.savedOn)} · {session.drillIds.length} drills
                   </span>
                 </button>
               </li>
