@@ -29,6 +29,7 @@ export function ClubStart() {
   const { role, clubScope } = useRole();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [registerOpen, setRegisterOpen] = useState(false);
   const visibleClubs = clubScope ? clubs.filter((club) => club.id === clubScope) : clubs;
   const registeredClubs = clubs.filter((club) => club.kind === "custom");
   // A registration covers one club: only a Developer sign-in can register another once one exists.
@@ -40,16 +41,17 @@ export function ClubStart() {
   if (!ready) return null;
 
   return (
-    <div className="grid items-start gap-10 lg:grid-cols-2 lg:gap-14">
-      <div>
+    <div>
       <p className="text-sm font-bold uppercase tracking-widest text-emerald-700">Club</p>
       <h1 className="mt-2 break-words text-[clamp(1.85rem,1.2rem+2.2vw,3.25rem)] font-black leading-[1.12] tracking-tight text-slate-950">{current ? current.name : "Load a club"}</h1>
-      <p className="mt-4 max-w-xl text-lg leading-relaxed text-slate-700">
+      <p className="mt-3 max-w-xl text-base leading-relaxed text-slate-700">
         {clubScope
-          ? "This sign-in only shows your club. Sign out to open another one; registering a second club needs a Developer sign-in."
-          : "Choose a club to open. Players, teams, drills, attendance, and the colours stay with that club."}
+          ? "This sign-in only shows your club. Sign out to open another one."
+          : "Open a role for the loaded club. Players, drills, and colours stay with that club."}
       </p>
-      <div className="mt-8 grid gap-4" data-club-list>
+      <div className="mt-6 grid items-start gap-8 lg:grid-cols-2 lg:gap-14">
+      <div className="order-2 lg:order-1">
+      <div className="grid gap-4" data-club-list>
         {visibleClubs.map((club) => (
           <article
             key={club.id}
@@ -140,12 +142,12 @@ export function ClubStart() {
         ))}
       </div>
       </div>
-      <div className="grid content-start gap-8">
+      <div className="order-1 grid content-start gap-8 lg:order-2">
       {current ? (
         <div>
           <h2 className="text-lg font-black text-slate-950">Open {current.name}</h2>
-          <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">Choose a role to open this club.</p>
-          <div className="mt-4">
+          <p className="mt-1 text-sm font-medium leading-relaxed text-slate-600">One tap opens that area.</p>
+          <div className="mt-3">
             <RolePicker />
           </div>
         </div>
@@ -153,24 +155,36 @@ export function ClubStart() {
         <p className="text-base font-semibold text-slate-700">Load {CLUB_NAME}, or register a club, before you open a role.</p>
       )}
       {canRegisterClub ? (
-        <section className="rounded-2xl bg-white p-5 ring-1 ring-slate-300 sm:p-6" aria-label="Register a club">
-          <h2 className="text-lg font-black text-slate-950">Register a club</h2>
-          <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">
-            Registration covers one club only. Its players, fees, statements and colours stay with that club.
-          </p>
-          <ClubForm
-            submitLabel="Register club"
-            onSubmit={(input) => {
-              void addClub(input);
-            }}
-          />
-        </section>
+        registerOpen ? (
+          <section className="rounded-2xl bg-white p-5 ring-1 ring-slate-300 sm:p-6" aria-label="Register a club">
+            <h2 className="text-lg font-black text-slate-950">Register a club</h2>
+            <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">
+              Registration covers one club only. Its players, fees, statements and colours stay with that club.
+            </p>
+            <ClubForm
+              submitLabel="Register club"
+              onSubmit={(input) => {
+                void addClub(input);
+                setRegisterOpen(false);
+              }}
+            />
+          </section>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setRegisterOpen(true)}
+            className="btn-quiet min-h-11 w-full rounded-xl px-4 text-sm font-bold"
+          >
+            Register a club
+          </button>
+        )
       ) : !role && registeredClubs.length > 0 ? (
         <p className="rounded-2xl bg-white p-5 text-sm font-medium leading-relaxed text-slate-600 ring-1 ring-slate-300" data-one-club-note>
           {registeredClubs[0].name} is registered on this device. Registration covers one club only, so sign in as a
           Developer to register another.
         </p>
       ) : null}
+      </div>
       </div>
     </div>
   );

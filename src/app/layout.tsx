@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   },
   description: "Football. Squads, drills, and pitch-side match tools for Clubstride.",
   applicationName: "Football",
-  manifest: `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/manifest.webmanifest`,
+  manifest: `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/manifest.webmanifest?v=2`,
   appleWebApp: {
     capable: true,
     title: "Football",

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useCoachTeam } from "@/components/coach/team-picker";
 import { formatPosition, normalizePositions, type PositionChoice, type StandardPosition } from "@/lib/club/positions";
 import type { ClubPlayer } from "@/lib/club/seed";
+import { DateField } from "@/components/club/date-field";
 import { addDays, formatDay, mondayOf, sessionToday, weekDates } from "@/lib/club/week";
 import { useClubStore } from "@/stores/club-store";
 
@@ -356,11 +357,10 @@ function GameDay({ teamId, teamName, gameDay }: { teamId: string; teamName: stri
       <h2 className="text-sm font-bold uppercase tracking-wide text-slate-700">Game day</h2>
       <label className="mt-2 block text-sm font-semibold text-slate-800">
         Match day for {teamName}
-        <input
-          type="date"
+        <DateField
           data-field="game-day"
           value={gameDay ?? ""}
-          onChange={(event) => setTeamGameDay(teamId, event.target.value)}
+          onChange={(next) => setTeamGameDay(teamId, next)}
           className="mt-1 block h-11 w-full max-w-xs rounded-md border border-slate-300 px-3 text-base"
         />
       </label>

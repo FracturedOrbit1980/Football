@@ -1,26 +1,24 @@
 "use client";
 
 import { useRole } from "@/components/auth/role-session";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ROLE_LABEL, type UserRole } from "@/lib/auth/roles";
 
 const ROLES: { role: UserRole; detail: string }[] = [
   {
     role: "SUPER_ADMIN",
-    detail: "The club you registered only: players, teams, fees, and the drill library.",
+    detail: "Players, teams, fees, and the drill library.",
   },
   {
     role: "HEAD_COACH",
-    detail: "Coach the allocated team: attendance, drills, and the match clock.",
+    detail: "Squad, drills, and the match clock.",
   },
   {
     role: "PLAYER",
-    detail: "Your profile, homework, and attendance once you are on a squad.",
+    detail: "Your ratings, homework, and attendance.",
   },
   {
     role: "DEVELOPER",
-    detail: "Every registered club, with the club list and balances across all of them.",
+    detail: "Every club on this device, with balances.",
   },
 ];
 
@@ -28,19 +26,20 @@ export function RolePicker() {
   const { signIn } = useRole();
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
+    <div className="grid gap-3">
       {ROLES.map((item) => (
-        <Card key={item.role}>
-          <CardHeader>
-            <CardTitle>{ROLE_LABEL[item.role]}</CardTitle>
-            <CardDescription className="text-slate-700">{item.detail}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button type="button" size="lg" className="h-11 w-full text-base" onClick={() => signIn(item.role)}>
-              Open {ROLE_LABEL[item.role].toLowerCase()}
-            </Button>
-          </CardContent>
-        </Card>
+        <button
+          key={item.role}
+          type="button"
+          onClick={() => signIn(item.role)}
+          className="flex min-h-14 w-full items-center gap-3 rounded-xl bg-white px-4 py-3 text-left ring-1 ring-slate-300"
+        >
+          <span className="min-w-0 flex-1">
+            <span className="block text-base font-black text-slate-950">{ROLE_LABEL[item.role]}</span>
+            <span className="mt-0.5 block text-sm font-medium leading-snug text-slate-600">{item.detail}</span>
+          </span>
+          <span className="btn-shade inline-flex min-h-11 shrink-0 items-center rounded-lg px-3 text-sm font-bold">Open</span>
+        </button>
       ))}
     </div>
   );

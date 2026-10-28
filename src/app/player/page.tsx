@@ -8,7 +8,7 @@ export default function PlayerPage() {
     <div>
       <PageHeader
         title="My game"
-        description="Choose your name and enter your PIN to open your own ratings, feedback, and attendance. Your coach keeps this profile private."
+        description="Choose your name and PIN to see ratings, homework, and attendance."
       />
       <PlayerHome />
     </div>

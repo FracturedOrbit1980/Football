@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 
+import { DateField } from "@/components/club/date-field";
 import { PlayerPortrait } from "@/components/club/player-photo";
+import { ConfirmBar } from "@/components/layout/confirm-bar";
 import { Button } from "@/components/ui/button";
 import {
   AGE_BUCKETS,
@@ -573,6 +575,7 @@ function AgreementForm({
   const [frequency, setFrequency] = useState<PlanFrequency>("Monthly");
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const [confirmRemove, setConfirmRemove] = useState(false);
 
   return (
     <div className="rounded-lg bg-slate-100 p-3" data-agreement={player.regNumber}>
@@ -609,11 +612,24 @@ function AgreementForm({
           <p className="mt-2 text-xs font-medium text-slate-600">
             Instalments are marked paid from the payments you record on Accounting after the agreement date.
           </p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <Button type="button" size="lg" variant="outline" className="h-11" data-field={`remove-agreement-${player.id}`} onClick={onRemove}>
-              Cancel agreement
-            </Button>
-          </div>
+          {confirmRemove ? (
+            <ConfirmBar
+              message="Cancel this payment agreement? Instalments already covered by recorded payments stay on the account."
+              confirmLabel="Cancel agreement"
+              cancelLabel="Keep agreement"
+              onConfirm={() => {
+                setConfirmRemove(false);
+                onRemove();
+              }}
+              onCancel={() => setConfirmRemove(false)}
+            />
+          ) : (
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Button type="button" size="lg" variant="outline" className="h-11" data-field={`remove-agreement-${player.id}`} onClick={() => setConfirmRemove(true)}>
+                Cancel agreement
+              </Button>
+            </div>
+          )}
           {notice ? <p className="mt-2 text-sm font-semibold text-emerald-800">{notice}</p> : null}
         </>
       ) : (
@@ -667,11 +683,10 @@ function AgreementForm({
             </label>
             <label className="block text-sm font-semibold text-slate-800">
               First instalment due
-              <input
-                type="date"
+              <DateField
                 value={firstDue}
                 data-field={`agreement-first-${player.id}`}
-                onChange={(event) => setFirstDue(event.target.value)}
+                onChange={setFirstDue}
                 className="mt-1 block h-11 w-full rounded-md border border-slate-300 px-3 text-base"
               />
             </label>
@@ -719,6 +734,7 @@ function PromiseForm({
   const [amount, setAmount] = useState(player.promise ? String(player.promise.amount) : defaultAmount > 0 ? String(defaultAmount) : "");
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const [confirmRemove, setConfirmRemove] = useState(false);
 
   return (
     <div className="rounded-lg bg-slate-100 p-3" data-promise={player.regNumber}>
@@ -732,11 +748,24 @@ function PromiseForm({
             Noted on {formatDay(player.promise.notedOn)}. The promise is marked kept as soon as payments recorded on
             or after that date cover the amount.
           </p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            <Button type="button" size="lg" variant="outline" className="h-11" data-field={`remove-promise-${player.id}`} onClick={onRemove}>
-              Remove promise
-            </Button>
-          </div>
+          {confirmRemove ? (
+            <ConfirmBar
+              message="Remove this promise to pay? The note stays in the correspondence history."
+              confirmLabel="Remove promise"
+              cancelLabel="Keep promise"
+              onConfirm={() => {
+                setConfirmRemove(false);
+                onRemove();
+              }}
+              onCancel={() => setConfirmRemove(false)}
+            />
+          ) : (
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Button type="button" size="lg" variant="outline" className="h-11" data-field={`remove-promise-${player.id}`} onClick={() => setConfirmRemove(true)}>
+                Remove promise
+              </Button>
+            </div>
+          )}
           {notice ? <p className="mt-2 text-sm font-semibold text-emerald-800">{notice}</p> : null}
         </>
       ) : (
@@ -775,11 +804,10 @@ function PromiseForm({
             </label>
             <label className="block text-sm font-semibold text-slate-800">
               Promised by
-              <input
-                type="date"
+              <DateField
                 value={date}
                 data-field={`promise-date-${player.id}`}
-                onChange={(event) => setDate(event.target.value)}
+                onChange={setDate}
                 className="mt-1 block h-11 w-full rounded-md border border-slate-300 px-3 text-base"
               />
             </label>

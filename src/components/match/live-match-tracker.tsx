@@ -14,6 +14,7 @@ import {
   type FormationName,
 } from "@/components/match/formation-pitch";
 import { TeamPicker, useCoachTeam } from "@/components/coach/team-picker";
+import { ConfirmBar } from "@/components/layout/confirm-bar";
 import { DEFAULT_PITCH_COLOR } from "@/lib/club/board";
 import { formatPosition, playsInGoal } from "@/lib/club/positions";
 import { useClubStore } from "@/stores/club-store";
@@ -51,6 +52,7 @@ export function LiveMatchTracker() {
   const [formationName, setFormationName] = useState("Custom formation 1");
   const [nameTouched, setNameTouched] = useState(false);
   const [formationSaved, setFormationSaved] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
   const shownName = nameTouched ? formationName : nextCustomFormationName(customFormations);
   const teamId = team?.id ?? "";
   const squadKey = clubPlayers
@@ -299,11 +301,7 @@ export function LiveMatchTracker() {
             size="lg"
             variant="secondary"
             className="h-14 min-w-36 text-base"
-            onClick={() => {
-              resetMatch();
-              setSelectedOff(null);
-              setSelectedOn(null);
-            }}
+            onClick={() => setConfirmReset(true)}
           >
             <RotateCcw className="size-5" />
             Reset
@@ -330,6 +328,21 @@ export function LiveMatchTracker() {
             Save minutes
           </Button>
         </div>
+        {confirmReset ? (
+          <ConfirmBar
+            message="Reset the clock and the minutes counted in this match? Who is on the pitch stays as it is."
+            confirmLabel="Reset minutes"
+            cancelLabel="Keep minutes"
+            onConfirm={() => {
+              resetMatch();
+              setSelectedOff(null);
+              setSelectedOn(null);
+              setConfirmReset(false);
+              setSaved(false);
+            }}
+            onCancel={() => setConfirmReset(false)}
+          />
+        ) : null}
         <p className="mt-3 text-center text-sm font-medium text-slate-300">
           {emptyMessage ? `${emptyMessage} ` : null}
           {saved ? "Minutes saved. Players with time on the pitch are marked present." : null}{" "}

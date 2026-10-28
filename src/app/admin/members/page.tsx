@@ -8,7 +8,7 @@ export default function MembersPage() {
     <div>
       <PageHeader
         title="Member management"
-        description="Search every member by name, surname, ID number, registration reference, mobile number or guardian details. Send statements in bulk, agree instalment plans over a time frame, record promises to pay, and sponsor a player's fee."
+        description="Search a member, then send a statement, agree instalments, or record a promise to pay."
       />
       <MembersBoard />
     </div>

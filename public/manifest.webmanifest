@@ -2,27 +2,27 @@
   "name": "Football",
   "short_name": "Football",
   "description": "Squads, drills, and pitch-side match tools for Clubstride",
-  "id": "/Football/",
-  "start_url": "/Football/",
-  "scope": "/Football/",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#0b1b33",
   "theme_color": "#0b1b33",
   "icons": [
     {
-      "src": "/Football/icons/icon-192.png",
+      "src": "icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/Football/icons/icon-512.png",
+      "src": "icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/Football/icons/icon-maskable-512.png",
+      "src": "icons/icon-maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

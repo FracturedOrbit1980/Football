@@ -8,7 +8,7 @@ export default function AdminPage() {
     <div>
       <PageHeader
         title="Club overview"
-        description="Open an age and a league for the club. Register players on People, send statements in bulk and manage payment agreements, promises to pay and sponsorship on Members, set season fees on Accounting, then the head coach allocates players and runs drills and attendance."
+        description="Pick an age and a division. Register players on People, set fees under Fees, and send statements on Members."
       />
       <ClubOverview />
     </div>

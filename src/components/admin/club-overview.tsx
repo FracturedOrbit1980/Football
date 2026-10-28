@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 
 import { useRole } from "@/components/auth/role-session";
+import { ConfirmBar } from "@/components/layout/confirm-bar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TeamPicker } from "@/components/coach/team-picker";
@@ -17,6 +19,8 @@ export function ClubOverview() {
   const players = useClubStore((state) => state.players);
   const drills = useClubStore((state) => state.drills);
   const resetClub = useClubStore((state) => state.resetClub);
+  const clubKind = useClubStore((state) => state.clubKind);
+  const [confirmReset, setConfirmReset] = useState(false);
   const clubs = useClubLibrary((state) => state.clubs);
   const activeId = useClubLibrary((state) => state.activeId);
   const load = useClubLibrary((state) => state.load);
@@ -96,7 +100,7 @@ export function ClubOverview() {
                         type="button"
                         data-open-club={club.id}
                         onClick={open}
-                        className="btn-shade inline-flex min-h-10 items-center rounded-lg px-3 text-sm font-bold"
+                        className="btn-shade inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-bold"
                       >
                         Open
                       </button>
@@ -105,7 +109,7 @@ export function ClubOverview() {
                       href="/admin/people"
                       data-club-players-link={club.id}
                       onClick={open}
-                      className="btn-quiet inline-flex min-h-10 items-center rounded-lg px-3 text-sm font-bold"
+                      className="btn-quiet inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-bold"
                     >
                       Players
                     </Link>
@@ -113,7 +117,7 @@ export function ClubOverview() {
                       href="/admin/accounting"
                       data-club-account-link={club.id}
                       onClick={open}
-                      className="btn-quiet inline-flex min-h-10 items-center rounded-lg px-3 text-sm font-bold"
+                      className="btn-quiet inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-bold"
                     >
                       Account
                     </Link>
@@ -168,9 +172,26 @@ export function ClubOverview() {
           </Card>
         ))}
       </div>
-      <Button type="button" variant="outline" size="lg" className="mt-4 h-11" onClick={() => resetClub()}>
-        Restore official library
-      </Button>
+      {confirmReset ? (
+        <ConfirmBar
+          message={
+            clubKind === "custom"
+              ? "Replace this club's players, fees, drills, and attendance with a fresh official drill library? Players on this device are removed."
+              : "Replace this club's squad, fees, drills, and attendance with the official Clubstride library?"
+          }
+          confirmLabel="Restore library"
+          cancelLabel="Keep current records"
+          onConfirm={() => {
+            resetClub();
+            setConfirmReset(false);
+          }}
+          onCancel={() => setConfirmReset(false)}
+        />
+      ) : (
+        <Button type="button" variant="outline" size="lg" className="mt-4 h-11" onClick={() => setConfirmReset(true)}>
+          Restore official library
+        </Button>
+      )}
     </div>
   );
 }
