@@ -49,6 +49,49 @@ export function ClubStart() {
           ? "This sign-in only shows your club. Sign out to open another one; registering a second club needs a Developer sign-in."
           : "Choose a club to open. Players, teams, drills, attendance, and the colours stay with that club."}
       </p>
+      <div className="mt-8 rounded-2xl bg-slate-900 text-white p-5 sm:p-6 ring-1 ring-white/10 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400">Integrated Ecosystem</span>
+            <h3 className="text-lg font-black text-white">Football, Lite & Pro</h3>
+          </div>
+          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+            Primary Hub
+          </span>
+        </div>
+        <p className="text-xs text-slate-300 leading-relaxed">
+          <strong className="text-white">Football</strong> is the primary club management platform. Use <strong className="text-white">Lite</strong> as the pitch-side offset companion on matchdays, and <strong className="text-white">Pro</strong> for the expanded coaching and player development suite.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          <a
+            href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/lite/`}
+            className="flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 transition active:scale-95 group"
+          >
+            <div className="space-y-0.5">
+              <div className="flex items-center space-x-1.5">
+                <span className="text-sm">⚡</span>
+                <span className="text-xs font-black text-emerald-400 group-hover:underline">Clubstride Lite</span>
+              </div>
+              <p className="text-[11px] text-slate-400">Matchday pitch, live timer & subs</p>
+            </div>
+            <span className="text-xs text-slate-400">Launch →</span>
+          </a>
+          <a
+            href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/pro/`}
+            className="flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 transition active:scale-95 group"
+          >
+            <div className="space-y-0.5">
+              <div className="flex items-center space-x-1.5">
+                <span className="text-sm">⭐</span>
+                <span className="text-xs font-black text-amber-400 group-hover:underline">Clubstride Pro</span>
+              </div>
+              <p className="text-[11px] text-slate-400">Drills, attendance & radar</p>
+            </div>
+            <span className="text-xs text-slate-400">Launch →</span>
+          </a>
+        </div>
+      </div>
+
       <div className="mt-8 grid gap-4" data-club-list>
         {visibleClubs.map((club) => (
           <article

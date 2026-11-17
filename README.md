@@ -11,6 +11,21 @@ Open http://localhost:3000 and choose Developer, Club admin, Head coach, or Play
 
 The hosted app is https://fracturedorbit1980.github.io/Football/
 
+## Integrated Ecosystem: Primary, Lite & Pro
+
+Football is the primary club management platform. The ecosystem consists of:
+
+1. **Football (Primary Club Platform)**: Hosted at [`https://fracturedorbit1980.github.io/Football/`](https://fracturedorbit1980.github.io/Football/)
+   - Full club administrative management, role-based access (Super Admin, Head Coach, Player, Developer).
+   - Club registry, age groups, player registration numbers, accounting & credit control, drill library.
+2. **Clubstride Lite (Pitch-Side Offset Tool)**: Hosted at [`https://fracturedorbit1980.github.io/Football/lite/`](https://fracturedorbit1980.github.io/Football/lite/)
+   - Focused, high-contrast pitch-side tactical console, stopwatch, one-tap substitution engine, and offline matchday tool.
+   - Offset from the primary platform for immediate touchline utility.
+3. **Clubstride Pro (Expanded Functionality)**: Hosted at [`https://fracturedorbit1980.github.io/Football/pro/`](https://fracturedorbit1980.github.io/Football/pro/)
+   - Advanced coaching drill library, player developmental ratings and radars, attendance roll-call register, multi-coach collaboration, and cloud squad sync.
+
+Both Lite and Pro live within the primary Football deployment and share data via same-origin storage and real-time messaging bridges.
+
 This app is a static export, so `npm run build` does not need secrets. Supabase credentials stay optional; see `.env.example`.
 
 ## Supabase

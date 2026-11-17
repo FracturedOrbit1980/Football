@@ -1,0 +1,25 @@
+{
+  "name": "Clubstride Lite",
+  "short_name": "Clubstride",
+  "description": "Clubstride Lite - Tactical Pitch and Live Rotations for grassroots coaches",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0A1630",
+  "theme_color": "#0A1630",
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

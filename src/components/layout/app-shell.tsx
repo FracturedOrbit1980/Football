@@ -80,6 +80,20 @@ export function AppShell({ children }: { children: ReactNode }) {
           )}
         </Link>
         <div className="flex shrink-0 items-center gap-2">
+          <a
+            href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/lite/`}
+            className="rounded-lg bg-emerald-500/20 border border-emerald-500/30 px-2.5 py-1 text-xs font-bold text-emerald-300 hover:bg-emerald-500/30 active:scale-95 transition"
+            title="Open Clubstride Lite Pitch-Side Tool"
+          >
+            ⚡ Lite
+          </a>
+          <a
+            href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/pro/`}
+            className="rounded-lg bg-amber-500/20 border border-amber-500/30 px-2.5 py-1 text-xs font-bold text-amber-300 hover:bg-amber-500/30 active:scale-95 transition"
+            title="Open Clubstride Pro Suite"
+          >
+            ⭐ Pro
+          </a>
           <AppearanceToggle />
           {role ? <SignOutButton /> : null}
         </div>
@@ -125,6 +139,25 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Link href="/" className="flex min-h-11 items-center text-sm font-bold text-emerald-300">
             Clubs
           </Link>
+          <div className="pt-2 border-t border-white/10 space-y-1.5">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-white/50">Pitch & Mobile Tools</p>
+            <a
+              href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/lite/`}
+              className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-emerald-300 hover:bg-white/10 transition"
+              title="Open Clubstride Lite Pitch-Side Tool"
+            >
+              <span>⚡</span>
+              <span>Lite (Pitch-side)</span>
+            </a>
+            <a
+              href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/pro/`}
+              className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-amber-300 hover:bg-white/10 transition"
+              title="Open Clubstride Pro Suite"
+            >
+              <span>⭐</span>
+              <span>Pro (Expanded)</span>
+            </a>
+          </div>
           {role ? <p className="text-sm font-semibold text-white/80">{ROLE_LABEL[role]}</p> : null}
           {role ? <SignOutButton /> : null}
         </div>

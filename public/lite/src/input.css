@@ -1,0 +1,175 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  /* Reusable button styles - Clubstride CI v1.0.0 (Lite surface) */
+  .btn-primary {
+    background-image: linear-gradient(to bottom, var(--cs-lite-go, #3BE38A), #1FB868);
+    color: var(--cs-lite-on-go, #06142B);
+    font-weight: 700;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+    transition: all 180ms cubic-bezier(0, 0, 0.2, 1);
+    outline: none;
+  }
+  .btn-primary:hover {
+    background-image: linear-gradient(to bottom, #7FF0B4, var(--cs-lite-go, #3BE38A));
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.2);
+    transform: translateY(-1.5px);
+  }
+  .btn-primary:active {
+    transform: scale(0.95) translateY(0);
+  }
+  .btn-primary:focus-visible {
+    box-shadow: 0 0 0 2px var(--cs-lite-bg, #0A1630), 0 0 0 4px var(--cs-lite-go, #3BE38A);
+  }
+
+  .btn-secondary {
+    background-color: rgba(27, 46, 94, 0.85);
+    color: var(--cs-lite-text-muted, #B8C6E6);
+    font-weight: 600;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.15);
+    transition: all 180ms cubic-bezier(0, 0, 0.2, 1);
+    outline: none;
+  }
+  .btn-secondary:hover {
+    background-color: rgba(36, 57, 110, 0.95);
+    color: var(--cs-lite-text, #FFFFFF);
+    border-color: rgba(255, 255, 255, 0.25);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+  }
+  .btn-secondary:active {
+    transform: scale(0.95) translateY(0);
+  }
+  .btn-secondary:focus-visible {
+    box-shadow: 0 0 0 2px var(--cs-lite-bg, #0A1630), 0 0 0 4px var(--cs-lite-text-muted, #B8C6E6);
+  }
+
+  .btn-danger {
+    background-image: linear-gradient(to bottom, var(--cs-lite-danger, #FF8A80), #E8615A);
+    color: var(--cs-lite-on-danger, #06142B);
+    font-weight: 700;
+    box-shadow: 0 4px 6px -1px rgba(225, 29, 72, 0.25);
+    transition: all 180ms cubic-bezier(0, 0, 0.2, 1);
+    outline: none;
+  }
+  .btn-danger:hover {
+    background-image: linear-gradient(to bottom, #FFB3AC, var(--cs-lite-danger, #FF8A80));
+    box-shadow: 0 10px 15px -3px rgba(255, 138, 128, 0.35);
+    transform: translateY(-1.5px);
+  }
+  .btn-danger:active {
+    transform: scale(0.95) translateY(0);
+  }
+  .btn-danger:focus-visible {
+    box-shadow: 0 0 0 2px var(--cs-lite-bg, #0A1630), 0 0 0 4px var(--cs-lite-danger, #FF8A80);
+  }
+
+  .btn-ghost {
+    background-color: transparent;
+    color: var(--cs-lite-text-muted, #B8C6E6);
+    font-weight: 600;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    transition: all 180ms cubic-bezier(0, 0, 0.2, 1);
+    outline: none;
+  }
+  .btn-ghost:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    color: var(--cs-lite-text, #FFFFFF);
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-1px);
+  }
+  .btn-ghost:active {
+    transform: scale(0.95) translateY(0);
+  }
+  .btn-ghost:focus-visible {
+    box-shadow: 0 0 0 2px var(--cs-lite-bg, #0A1630), 0 0 0 4px var(--cs-lite-primary, #22D3EE);
+  }
+
+  .btn-pill {
+    border-radius: 9999px !important;
+  }
+
+  /* Striped grass pitch pattern */
+  .pitch-grass-stripes {
+    background-image: repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.035) 0px,
+      rgba(255, 255, 255, 0.035) 28px,
+      rgba(0, 0, 0, 0.04) 28px,
+      rgba(0, 0, 0, 0.04) 56px
+    );
+  }
+
+  /* Player token smooth movement when formation changes */
+  .player-token {
+    transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1), top 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.15s ease-out, box-shadow 0.2s ease-out;
+    touch-action: none;
+  }
+  .player-token:active {
+    transform: scale(1.12);
+  }
+
+  /* Sheet style modal animation on mobile screens */
+  @media (max-width: 640px) {
+    .modal-sheet {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      max-height: 90vh;
+      border-bottom-left-radius: 0 !important;
+      border-bottom-right-radius: 0 !important;
+      animation: slideUpSheet 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+  }
+
+  @keyframes slideUpSheet {
+    from {
+      transform: translateY(100%);
+      opacity: 0.7;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+}
+
+@layer utilities {
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+  .min-tap-target {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* Clubstride CI line icons (inline sprite: <svg class="ci ci-24"><use href="#ci-goal"/></svg>) */
+  .ci {
+    display: inline-block;
+    width: 1.25em;
+    height: 1.25em;
+    vertical-align: -0.25em;
+    flex-shrink: 0;
+  }
+  .ci-12 { width: 12px; height: 12px; vertical-align: -0.15em; }
+  .ci-14 { width: 14px; height: 14px; vertical-align: -0.18em; }
+  .ci-16 { width: 16px; height: 16px; }
+  .ci-20 { width: 20px; height: 20px; }
+  .ci-24 { width: 24px; height: 24px; }
+  .ci-32 { width: 32px; height: 32px; }
+  .ci-40 { width: 40px; height: 40px; }
+  .ci-block { vertical-align: middle; }
+  .ci-primary { color: var(--cs-lite-primary, #22D3EE); }
+  .ci-go { color: var(--cs-lite-go, #3BE38A); }
+  .ci-accent { color: var(--cs-lite-accent, #C8F230); }
+  .ci-danger { color: var(--cs-lite-danger, #FF8A80); }
+  .ci-muted { color: var(--cs-lite-text-muted, #B8C6E6); }
+  .ci-assist { color: var(--cs-match-assist, #2DD4BF); }
+  .ci-goal { color: var(--cs-match-goal, #C8F230); }
+  .ci-card-yellow { color: var(--cs-match-card-yellow, #FFD500); }
+  .ci-card-red { color: var(--cs-match-card-red, #D7141A); }
+}
