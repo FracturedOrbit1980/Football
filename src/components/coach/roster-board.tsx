@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useCoachTeam } from "@/components/coach/team-picker";
 import { formatPosition, normalizePositions, type PositionChoice, type StandardPosition } from "@/lib/club/positions";
 import type { ClubPlayer } from "@/lib/club/seed";
+import { syncTeamToLite } from "@/lib/club/sync-lite";
 import { addDays, formatDay, mondayOf, sessionToday, weekDates } from "@/lib/club/week";
 import { useClubStore } from "@/stores/club-store";
 
@@ -18,9 +19,27 @@ export function RosterBoard() {
   const setHomework = useClubStore((state) => state.setHomework);
   const { team, teams } = useCoachTeam();
   const assignPlayer = useClubStore((state) => state.assignPlayer);
+  const coaches = useClubStore((state) => state.coaches);
+  const activeCoach = coaches.find((c) => c.teamId === team?.id)?.name;
   const squad = players
     .filter((player) => player.teamId === team?.id)
     .sort((a, b) => a.squadNumber - b.squadNumber);
+
+  const syncActiveSquad = (customSquad?: ClubPlayer[]) => {
+    if (!team) return;
+    const targetSquad = customSquad ?? useClubStore.getState().players.filter((p) => p.teamId === team.id);
+    syncTeamToLite(
+      { id: team.id, name: `${team.ageGroup} · ${team.division ?? team.name}` },
+      targetSquad.map((p) => ({
+        id: p.id,
+        name: p.name,
+        squadNumber: p.squadNumber,
+        position: formatPosition(p),
+        photo: p.photo,
+      })),
+      activeCoach
+    );
+  };
   const [selectedId, setSelectedId] = useState("");
   const selected = squad.find((player) => player.id === selectedId) ?? null;
   const [scores, setScores] = useState({ technical: 6, tactical: 6, physical: 6, mental: 6 });
@@ -73,6 +92,33 @@ export function RosterBoard() {
   if (!selected) {
     return (
       <div className="space-y-4">
+        {team ? (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-950 to-emerald-950 p-4 text-white shadow-md">
+            <div>
+              <p className="text-xs font-black uppercase tracking-wider text-emerald-400">Pitch-side Match Engine</p>
+              <h3 className="text-base font-black text-white">{team.ageGroup} · {team.division ?? team.name}</h3>
+              <p className="text-xs text-slate-300">
+                {squad.length} allocated players · {activeCoach ? `Coach: ${activeCoach}` : "No coach assigned yet"}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <a
+                href="./lite/"
+                onClick={() => syncActiveSquad()}
+                className="inline-flex h-10 items-center justify-center rounded-xl bg-teal-400 px-4 text-xs font-black uppercase tracking-wide text-slate-950 transition hover:bg-teal-300 active:scale-95 shadow-sm"
+              >
+                ⚡ Open Lite (Pitch-side)
+              </a>
+              <a
+                href="./pro/"
+                onClick={() => syncActiveSquad()}
+                className="inline-flex h-10 items-center justify-center rounded-xl border border-amber-400/40 bg-amber-400/20 px-4 text-xs font-black uppercase tracking-wide text-amber-300 transition hover:bg-amber-400/30 active:scale-95 shadow-sm"
+              >
+                ⭐ Open Pro
+              </a>
+            </div>
+          </div>
+        ) : null}
         <p className="rounded-lg bg-white px-4 py-3 font-semibold text-slate-800 ring-1 ring-slate-300">
           {team
             ? squad.length === 0
@@ -108,6 +154,7 @@ export function RosterBoard() {
           <AllocatePlayers
             teamId={team.id}
             teamLabel={`${team.ageGroup} · ${team.division ?? team.name}`}
+            onAllocate={() => setTimeout(() => syncActiveSquad(), 50)}
           />
         ) : null}
       </div>
@@ -179,8 +226,9 @@ export function RosterBoard() {
               position: editRole,
               positions: editRoles,
             });
-            setSaved(`Updated ${editName.trim()}.`);
+            setSaved(`Updated ${editName.trim()}. Synced to Lite & Pro.`);
             setConfirmDelete(false);
+            setTimeout(() => syncActiveSquad(), 50);
           }}
         >
           <h3 className="text-sm font-bold uppercase tracking-wide text-slate-700">Edit player</h3>
@@ -189,7 +237,10 @@ export function RosterBoard() {
             photo={selected.photo}
             name={selected.name}
             field="squad-photo"
-            onPhoto={(next) => setPlayerPhoto(selected.id, next)}
+            onPhoto={(next) => {
+              setPlayerPhoto(selected.id, next);
+              setTimeout(() => syncActiveSquad(), 50);
+            }}
           />
           <label className="block text-sm font-semibold text-slate-800">
             Name
@@ -228,7 +279,10 @@ export function RosterBoard() {
             <select
               value={selected.teamId}
               data-field="edit-team"
-              onChange={(event) => assignPlayer(selected.id, event.target.value)}
+              onChange={(event) => {
+                assignPlayer(selected.id, event.target.value);
+                setTimeout(() => syncActiveSquad(), 50);
+              }}
               className="mt-1 block h-11 w-full rounded-md border border-slate-300 bg-white px-2 text-base"
             >
               <option value="">Not on a team yet</option>
@@ -527,7 +581,7 @@ function csvCell(value: string) {
   return value;
 }
 
-function AllocatePlayers({ teamId, teamLabel }: { teamId: string; teamLabel: string }) {
+function AllocatePlayers({ teamId, teamLabel, onAllocate }: { teamId: string; teamLabel: string; onAllocate?: () => void }) {
   const players = useClubStore((state) => state.players);
   const assignPlayer = useClubStore((state) => state.assignPlayer);
   const waiting = players
@@ -538,7 +592,7 @@ function AllocatePlayers({ teamId, teamLabel }: { teamId: string; teamLabel: str
     <section className="rounded-xl bg-white p-4 ring-1 ring-slate-300" data-allocate>
       <h2 className="text-sm font-bold uppercase tracking-wide text-slate-700">Allocate a player</h2>
       <p className="mt-1 text-sm font-medium text-slate-700">
-        Players registered by the club who are not on a team yet. Allocating one puts them in {teamLabel}.
+        Players registered by the club who are not on a team yet. Allocating one puts them in {teamLabel} and syncs immediately to Lite & Pro.
       </p>
       {waiting.length === 0 ? (
         <p className="mt-3 text-sm font-semibold text-slate-800">Every registered player is on a team.</p>
@@ -555,7 +609,15 @@ function AllocatePlayers({ teamId, teamLabel }: { teamId: string; teamLabel: str
                   <span className="block truncate text-sm text-slate-600">{formatPosition(player)}</span>
                 </span>
               </span>
-              <Button type="button" size="lg" className="h-11" onClick={() => assignPlayer(player.id, teamId)}>
+              <Button
+                type="button"
+                size="lg"
+                className="h-11"
+                onClick={() => {
+                  assignPlayer(player.id, teamId);
+                  onAllocate?.();
+                }}
+              >
                 Allocate to this team
               </Button>
             </li>

@@ -16,6 +16,7 @@ import {
 import { TeamPicker, useCoachTeam } from "@/components/coach/team-picker";
 import { DEFAULT_PITCH_COLOR } from "@/lib/club/board";
 import { formatPosition, playsInGoal } from "@/lib/club/positions";
+import { syncTeamToLite } from "@/lib/club/sync-lite";
 import { useClubStore } from "@/stores/club-store";
 import { useMatchStore, type PlayerMatchState } from "@/stores/match-store";
 
@@ -41,7 +42,9 @@ export function LiveMatchTracker() {
   const saveCustomFormation = useClubStore((state) => state.saveCustomFormation);
   const loadSquad = useMatchStore((state) => state.loadSquad);
   const clubPlayers = useClubStore((state) => state.players);
+  const coaches = useClubStore((state) => state.coaches);
   const { team } = useCoachTeam();
+  const coachName = coaches.find((c) => c.teamId === team?.id)?.name;
   const [selectedOff, setSelectedOff] = useState<string | null>(null);
   const [selectedOn, setSelectedOn] = useState<string | null>(null);
   const [opponent, setOpponent] = useState("");
@@ -335,6 +338,55 @@ export function LiveMatchTracker() {
           {saved ? "Minutes saved. Players with time on the pitch are marked present." : null}{" "}
           Tap a player on the pitch, then a bench player, to substitute. Minutes accrue only while the clock runs.
         </p>
+
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-700/80 bg-slate-950/70 p-3">
+          <div>
+            <span className="block text-xs font-black uppercase tracking-wider text-emerald-400">Pitch-side Match Engine</span>
+            <span className="block text-xs text-slate-300">Run the live touchline clock, pitch substitutions, or match events</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <a
+              href="./lite/"
+              onClick={() => {
+                if (!team) return;
+                syncTeamToLite(
+                  { id: team.id, name: team.name },
+                  clubPlayers.filter((p) => p.teamId === team.id).map((p) => ({
+                    id: p.id,
+                    name: p.name,
+                    squadNumber: p.squadNumber,
+                    position: formatPosition(p),
+                    photo: p.photo,
+                  })),
+                  coachName
+                );
+              }}
+              className="inline-flex h-9 items-center justify-center rounded-lg bg-teal-400 px-3 text-xs font-black uppercase tracking-wide text-slate-950 transition hover:bg-teal-300 active:scale-95 shadow-sm"
+            >
+              ⚡ Pitch-side Lite
+            </a>
+            <a
+              href="./pro/"
+              onClick={() => {
+                if (!team) return;
+                syncTeamToLite(
+                  { id: team.id, name: team.name },
+                  clubPlayers.filter((p) => p.teamId === team.id).map((p) => ({
+                    id: p.id,
+                    name: p.name,
+                    squadNumber: p.squadNumber,
+                    position: formatPosition(p),
+                    photo: p.photo,
+                  })),
+                  coachName
+                );
+              }}
+              className="inline-flex h-9 items-center justify-center rounded-lg border border-amber-400/40 bg-amber-400/20 px-3 text-xs font-black uppercase tracking-wide text-amber-300 transition hover:bg-amber-400/30 active:scale-95 shadow-sm"
+            >
+              ⭐ Pro Tracker
+            </a>
+          </div>
+        </div>
       </section>
       </div>
 

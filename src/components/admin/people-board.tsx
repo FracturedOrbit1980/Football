@@ -11,6 +11,7 @@ import { ageLabel, ensureYouthAges } from "@/lib/club/age";
 import { formatPosition, normalizePositions, type PositionChoice, type StandardPosition } from "@/lib/club/positions";
 import { digitsOf, joinName, searchPlayers, splitName } from "@/lib/club/registration";
 import { CORRESPONDENCE_CHANNELS, type ClubPlayer, type CorrespondenceChannel } from "@/lib/club/seed";
+import { syncTeamToLite } from "@/lib/club/sync-lite";
 import { formatDay } from "@/lib/club/week";
 import { useClubStore, type NewPlayerInput } from "@/stores/club-store";
 
@@ -21,11 +22,32 @@ export function PeopleBoard() {
   const players = useClubStore((state) => state.players);
   const addPlayer = useClubStore((state) => state.addPlayer);
   const updatePlayer = useClubStore((state) => state.updatePlayer);
+  const assignPlayer = useClubStore((state) => state.assignPlayer);
   const addCoach = useClubStore((state) => state.addCoach);
   const coaches = useClubStore((state) => state.coaches);
   const teams = ageGroups.flatMap((group) =>
     group.teams.map((team) => ({ ...team, ageGroup: ageLabel(group.name) })),
   );
+
+  const syncTeam = (targetTeamId: string) => {
+    if (!targetTeamId) return;
+    const targetTeam = teams.find((t) => t.id === targetTeamId);
+    if (!targetTeam) return;
+    const currentPlayers = useClubStore.getState().players;
+    const teamPlayers = currentPlayers.filter((p) => p.teamId === targetTeamId);
+    const coach = coaches.find((c) => c.teamId === targetTeamId);
+    syncTeamToLite(
+      { id: targetTeam.id, name: `${targetTeam.ageGroup} · ${targetTeam.division ?? targetTeam.name}` },
+      teamPlayers.map((p) => ({
+        id: p.id,
+        name: p.name,
+        squadNumber: p.squadNumber,
+        position: formatPosition(p),
+        photo: p.photo,
+      })),
+      coach?.name
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -34,10 +56,41 @@ export function PeopleBoard() {
         <Step n="2" title="Account" detail="Set the season fee on Accounting, then send statements, agreements and sponsorship on Members." />
         <Step n="3" title="Coach" detail="The head coach allocates the player to a team and league, then runs ratings and attendance." />
       </ol>
-      <RegisterForm players={players} onSave={addPlayer} />
+      <RegisterForm
+        players={players}
+        teams={teams}
+        coaches={coaches}
+        onSave={(input) => {
+          const ref = addPlayer(input);
+          if (input.teamId) {
+            setTimeout(() => syncTeam(input.teamId), 50);
+          }
+          return ref;
+        }}
+      />
       <PlayerUpload />
-      <PlayerDirectory players={players} teams={teams} onSave={updatePlayer} />
-      <CoachAssign teams={teams} coaches={coaches} onAssign={addCoach} />
+      <PlayerDirectory
+        players={players}
+        teams={teams}
+        coaches={coaches}
+        onSave={updatePlayer}
+        onAssignTeam={(playerId, nextTeamId, prevTeamId) => {
+          assignPlayer(playerId, nextTeamId);
+          setTimeout(() => {
+            if (nextTeamId) syncTeam(nextTeamId);
+            if (prevTeamId && prevTeamId !== nextTeamId) syncTeam(prevTeamId);
+          }, 50);
+        }}
+        onSyncTeam={syncTeam}
+      />
+      <CoachAssign
+        teams={teams}
+        coaches={coaches}
+        onAssign={(teamId, coachName) => {
+          addCoach(teamId, coachName);
+          setTimeout(() => syncTeam(teamId), 50);
+        }}
+      />
     </div>
   );
 }
@@ -102,9 +155,13 @@ function Step({ n, title, detail }: { n: string; title: string; detail: string }
 
 function RegisterForm({
   players,
+  teams,
+  coaches,
   onSave,
 }: {
   players: ClubPlayer[];
+  teams: TeamOption[];
+  coaches: { teamId: string; name: string }[];
   onSave: (input: NewPlayerInput) => string;
 }) {
   const [firstName, setFirstName] = useState("");
@@ -112,6 +169,7 @@ function RegisterForm({
   const [idNumber, setIdNumber] = useState("");
   const [mobile, setMobile] = useState("");
   const [number, setNumber] = useState(1);
+  const [teamId, setTeamId] = useState("");
   const [role, setRole] = useState<PositionChoice>("Central midfielder");
   const [roles, setRoles] = useState<StandardPosition[]>([]);
   const [photo, setPhoto] = useState("");
@@ -150,22 +208,25 @@ function RegisterForm({
           squadNumber: number,
           position: role,
           positions: roles,
-          teamId: "",
+          teamId,
           photo,
         });
-        setNotice(`${name} registered as ${reference}.`);
+        const assignedTeam = teams.find((t) => t.id === teamId);
+        const teamInfo = assignedTeam ? ` · Assigned to ${assignedTeam.ageGroup} (${assignedTeam.division ?? assignedTeam.name})` : "";
+        setNotice(`${name} registered as ${reference}${teamInfo}. Accessible in Lite & Pro immediately.`);
         setFirstName("");
         setSurname("");
         setIdNumber("");
         setMobile("");
         setPhoto("");
+        setTeamId("");
         setNumber((current) => Math.min(99, current + 1));
       }}
     >
       <div className="sm:col-span-2">
         <h2 className="text-lg font-bold text-slate-950">Register a player</h2>
         <p className="mt-1 text-sm font-medium text-slate-600">
-          The club issues a registration reference when you save. Add the ID and mobile number so the record is easy to find later. The head coach can change the position or team later.
+          The club issues a registration reference when you save. Add the ID and mobile number so the record is easy to find later. Allocating to a team immediately syncs to Clubstride Lite & Pro for that squad and coach.
         </p>
       </div>
       <label className="text-sm font-semibold text-slate-800">
@@ -224,6 +285,23 @@ function RegisterForm({
           className="mt-1 h-11 w-full rounded-md border border-slate-300 px-3 text-base"
         />
       </label>
+      <label className="text-sm font-semibold text-slate-800">
+        Team allocation
+        <select
+          value={teamId}
+          data-field="register-team"
+          onChange={(event) => setTeamId(event.target.value)}
+          className="mt-1 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-base"
+        >
+          <option value="">Waiting for coach allocation</option>
+          {teams.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.ageGroup} · {t.division ?? t.name}
+              {coaches.find((c) => c.teamId === t.id) ? ` (Coach: ${coaches.find((c) => c.teamId === t.id)?.name})` : ""}
+            </option>
+          ))}
+        </select>
+      </label>
       <div className="sm:col-span-2">
         <PlayerPhotoField photo={photo} name={joinName(firstName, surname)} field="register-photo" onPhoto={setPhoto} />
       </div>
@@ -254,11 +332,17 @@ function RegisterForm({
 function PlayerDirectory({
   players,
   teams,
+  coaches,
   onSave,
+  onAssignTeam,
+  onSyncTeam,
 }: {
   players: ClubPlayer[];
   teams: TeamOption[];
+  coaches: { teamId: string; name: string }[];
   onSave: (playerId: string, input: { name: string; squadNumber: number; position: string; positions?: string[]; photo?: string; firstName?: string; surname?: string; idNumber?: string; mobile?: string }) => void;
+  onAssignTeam: (playerId: string, nextTeamId: string, prevTeamId?: string) => void;
+  onSyncTeam: (teamId: string) => void;
 }) {
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState("");
@@ -278,7 +362,7 @@ function PlayerDirectory({
       <div className="rounded-xl bg-white p-4 ring-1 ring-slate-300">
         <h2 className="text-lg font-bold text-slate-950">Find a player</h2>
         <p className="mt-1 text-sm font-medium text-slate-600">
-          Search by reference, ID number, mobile number, first name or surname. Add another word to narrow the list. Open a player to see the record and correspondence history in place.
+          Search by reference, ID number, mobile number, first name or surname. Add another word to narrow the list. Open a player to see the record, change their allocated team, and sync to pitch-side Lite & Pro.
         </p>
         <label className="mt-3 block max-w-xl text-sm font-semibold text-slate-800">
           Search players
@@ -344,7 +428,11 @@ function PlayerDirectory({
                       key={player.id}
                       player={player}
                       teamLabel={labelOf(player)}
+                      teams={teams}
+                      coaches={coaches}
                       onSave={onSave}
+                      onAssignTeam={onAssignTeam}
+                      onSyncTeam={onSyncTeam}
                       onClose={() => setSelectedId("")}
                     />
                   </div>
@@ -361,12 +449,20 @@ function PlayerDirectory({
 function PlayerRecord({
   player,
   teamLabel,
+  teams,
+  coaches,
   onSave,
+  onAssignTeam,
+  onSyncTeam,
   onClose,
 }: {
   player: ClubPlayer;
   teamLabel: string;
+  teams: TeamOption[];
+  coaches: { teamId: string; name: string }[];
   onSave: (playerId: string, input: { name: string; squadNumber: number; position: string; positions?: string[]; photo?: string; firstName?: string; surname?: string; idNumber?: string; mobile?: string }) => void;
+  onAssignTeam: (playerId: string, nextTeamId: string, prevTeamId?: string) => void;
+  onSyncTeam: (teamId: string) => void;
   onClose: () => void;
 }) {
   const setPlayerPhoto = useClubStore((state) => state.setPlayerPhoto);
@@ -378,6 +474,7 @@ function PlayerRecord({
   const [idNumber, setIdNumber] = useState(player.idNumber);
   const [mobile, setMobile] = useState(player.mobile);
   const [number, setNumber] = useState(player.squadNumber);
+  const [teamId, setTeamId] = useState(player.teamId ?? "");
   const [role, setRole] = useState<PositionChoice>(stored.position);
   const [roles, setRoles] = useState<StandardPosition[]>(stored.positions);
   const [editing, setEditing] = useState(false);
@@ -480,7 +577,12 @@ function PlayerRecord({
               position: role,
               positions: roles,
             });
-            setSaved(`Saved ${name}.`);
+            if (teamId !== player.teamId) {
+              onAssignTeam(player.id, teamId, player.teamId);
+            } else if (teamId) {
+              setTimeout(() => onSyncTeam(teamId), 50);
+            }
+            setSaved(`Saved ${name}. Synced to Lite & Pro.`);
           }}
         >
           <h3 className="text-sm font-bold uppercase tracking-wide text-slate-700">Edit player details</h3>
@@ -537,6 +639,23 @@ function PlayerRecord({
                 className="mt-1 h-11 w-full rounded-md border border-slate-300 px-3 text-base"
               />
             </label>
+            <label className="text-sm font-semibold text-slate-800">
+              Team and league
+              <select
+                value={teamId}
+                data-field="record-team"
+                onChange={(event) => setTeamId(event.target.value)}
+                className="mt-1 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-base"
+              >
+                <option value="">Waiting for coach allocation</option>
+                {teams.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.ageGroup} · {t.division ?? t.name}
+                    {coaches.find((c) => c.teamId === t.id) ? ` (Coach: ${coaches.find((c) => c.teamId === t.id)?.name})` : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
           <PositionFields
             role={role}
@@ -552,7 +671,12 @@ function PlayerRecord({
             photo={player.photo}
             name={player.name}
             field="record-photo"
-            onPhoto={(next) => setPlayerPhoto(player.id, next)}
+            onPhoto={(next) => {
+              setPlayerPhoto(player.id, next);
+              if (player.teamId) {
+                setTimeout(() => onSyncTeam(player.teamId), 50);
+              }
+            }}
           />
           <div className="flex flex-wrap items-center gap-3">
             <Button type="submit" size="lg" className="h-11">
