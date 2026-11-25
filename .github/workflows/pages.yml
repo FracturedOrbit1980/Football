@@ -27,9 +27,12 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      # The handoff suite builds the export and must pass before it is uploaded.
+      - run: npm run test:e2e
         env:
           NEXT_PUBLIC_BASE_PATH: /Football
+          NEXT_TELEMETRY_DISABLED: "1"
       - uses: actions/upload-pages-artifact@v3
         with:
           path: out

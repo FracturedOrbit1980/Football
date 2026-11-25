@@ -38,3 +38,34 @@ npx supabase db push
 ```
 
 The migration does not insert auth users. Copy `.env.example` to `.env.local` only for that later connection.
+
+## Coach handoff regression
+
+The Chromium tests build and serve the production static export on loopback, then
+click the squad/match launch controls. Fixtures contain only a fictional custom
+club, players and coaches; external network requests and service workers are
+blocked in each fresh browser context.
+
+```bash
+npm ci --ignore-scripts
+npx playwright install chromium
+npm run test:e2e
+NEXT_PUBLIC_BASE_PATH=/Football npm run test:e2e
+```
+
+The matrix covers roster/match × Lite/Pro destinations and published squad
+identity. The UI flow also creates a team, registers players, assigns/replaces a
+coach, opens each tier, and checks the visible squad after reload. Pro controls
+cover an unnamed local squad and rejection of an owned cloud squad without
+membership. No live login or cloud service is used.
+
+The checked-in Pro Expo HTML hardcodes `/Football/pro/` assets. Its rendered
+squad tests therefore run under `/Football`; the empty-prefix run still tests
+all four navigation destinations and the complete Lite journey. Those explicit
+Pro skips are a separate packaging limitation, not a handoff pass.
+
+`PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` can select an installed Chromium, and
+`PLAYWRIGHT_PORT` can change the default loopback test port (4187). If a local
+HTTP proxy is configured, exclude `127.0.0.1,localhost` via `NO_PROXY`/`no_proxy`.
+The test server always starts from the current export and never reuses an
+existing server. CI runs both deployment prefixes without publishing.

@@ -12,8 +12,7 @@ export interface SyncPlayerInput {
 
 export function syncTeamToLite(
   team: { id: string; name: string },
-  players: SyncPlayerInput[],
-  coachName?: string
+  players: SyncPlayerInput[]
 ) {
   if (typeof window === "undefined") return;
 
@@ -27,11 +26,6 @@ export function syncTeamToLite(
   // Sanitize team id and team name according to contract constraints
   const safeTeamId = (team.id || "team-default").replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 200);
   const safeTeamName = (team.name || "Club Team").trim().slice(0, 200).replace(/[<>\u0000-\u001f\u007f]/g, "");
-
-  const safeOwnerId =
-    coachName && coachName.trim()
-      ? coachName.trim().slice(0, 200).replace(/[<>\u0000-\u001f\u007f]/g, "")
-      : undefined;
 
   const validPlayers = players.map((p, idx) => {
     const rawId = (p.id || `p-${idx}`).replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 200);
@@ -66,12 +60,13 @@ export function syncTeamToLite(
     return row;
   });
 
+  // Football creates a browser-local squad. Coach assignments stay in Football;
+  // ownerId/cloudTeamId/readOnly are reserved for authenticated Pro membership.
   const snapshot = {
     version: 1,
     installationId,
     teamId: safeTeamId,
     teamName: safeTeamName,
-    ownerId: safeOwnerId,
     players: validPlayers,
     revision: new Date().toISOString(),
   };

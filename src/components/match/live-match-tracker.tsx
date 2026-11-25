@@ -42,9 +42,7 @@ export function LiveMatchTracker() {
   const saveCustomFormation = useClubStore((state) => state.saveCustomFormation);
   const loadSquad = useMatchStore((state) => state.loadSquad);
   const clubPlayers = useClubStore((state) => state.players);
-  const coaches = useClubStore((state) => state.coaches);
   const { team } = useCoachTeam();
-  const coachName = coaches.find((c) => c.teamId === team?.id)?.name;
   const [selectedOff, setSelectedOff] = useState<string | null>(null);
   const [selectedOn, setSelectedOn] = useState<string | null>(null);
   const [opponent, setOpponent] = useState("");
@@ -346,7 +344,7 @@ export function LiveMatchTracker() {
           </div>
           <div className="flex flex-wrap gap-2">
             <a
-              href="./lite/"
+              href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/lite/`}
               onClick={() => {
                 if (!team) return;
                 syncTeamToLite(
@@ -358,7 +356,6 @@ export function LiveMatchTracker() {
                     position: formatPosition(p),
                     photo: p.photo,
                   })),
-                  coachName
                 );
               }}
               className="inline-flex h-9 items-center justify-center rounded-lg bg-teal-400 px-3 text-xs font-black uppercase tracking-wide text-slate-950 transition hover:bg-teal-300 active:scale-95 shadow-sm"
@@ -366,7 +363,7 @@ export function LiveMatchTracker() {
               ⚡ Pitch-side Lite
             </a>
             <a
-              href="./pro/"
+              href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/pro/`}
               onClick={() => {
                 if (!team) return;
                 syncTeamToLite(
@@ -378,7 +375,6 @@ export function LiveMatchTracker() {
                     position: formatPosition(p),
                     photo: p.photo,
                   })),
-                  coachName
                 );
               }}
               className="inline-flex h-9 items-center justify-center rounded-lg border border-amber-400/40 bg-amber-400/20 px-3 text-xs font-black uppercase tracking-wide text-amber-300 transition hover:bg-amber-400/30 active:scale-95 shadow-sm"

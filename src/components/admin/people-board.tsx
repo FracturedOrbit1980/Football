@@ -35,7 +35,6 @@ export function PeopleBoard() {
     if (!targetTeam) return;
     const currentPlayers = useClubStore.getState().players;
     const teamPlayers = currentPlayers.filter((p) => p.teamId === targetTeamId);
-    const coach = coaches.find((c) => c.teamId === targetTeamId);
     syncTeamToLite(
       { id: targetTeam.id, name: `${targetTeam.ageGroup} · ${targetTeam.division ?? targetTeam.name}` },
       teamPlayers.map((p) => ({
@@ -45,7 +44,6 @@ export function PeopleBoard() {
         position: formatPosition(p),
         photo: p.photo,
       })),
-      coach?.name
     );
   };
 

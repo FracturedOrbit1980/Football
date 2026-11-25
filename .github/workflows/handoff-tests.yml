@@ -1,0 +1,32 @@
+name: Coach handoff regression
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  handoff:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        base_path: ["", "/Football"]
+    env:
+      NEXT_PUBLIC_BASE_PATH: ${{ matrix.base_path }}
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: handoff-results-${{ strategy.job-index }}
+          path: test-results/
