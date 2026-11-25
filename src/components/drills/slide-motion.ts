@@ -6,7 +6,10 @@ import { useEffect, useRef, useState } from "react";
 export function useSlideTravel(active: boolean, speed: number, onStep: () => void) {
   const [travel, setTravel] = useState(0);
   const onStepRef = useRef(onStep);
-  onStepRef.current = onStep;
+
+  useEffect(() => {
+    onStepRef.current = onStep;
+  }, [onStep]);
 
   useEffect(() => {
     if (!active) return;

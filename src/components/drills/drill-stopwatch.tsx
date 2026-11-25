@@ -6,35 +6,44 @@ import { useEffect, useReducer } from "react";
 import { Button } from "@/components/ui/button";
 
 type TimerState = {
-  secondsLeft: number;
-  isActive: boolean;
+  /** Remaining milliseconds banked while paused. */
+  remainingMs: number;
+  /** Wall-clock ms when the running block finishes, or null while paused. */
+  endsAt: number | null;
+  /** Last time the display was refreshed; only used to trigger re-renders. */
+  now: number;
   drillKey: string;
 };
 
 type TimerAction =
-  | { type: "tick" }
-  | { type: "toggle" }
+  | { type: "tick"; now: number }
+  | { type: "toggle"; now: number }
   | { type: "reset"; targetSeconds: number }
   | { type: "load"; drillKey: string; targetSeconds: number };
+
+function remainingAt(state: TimerState, now: number) {
+  return state.endsAt === null ? state.remainingMs : Math.max(0, state.endsAt - now);
+}
 
 function timerReducer(state: TimerState, action: TimerAction): TimerState {
   switch (action.type) {
     case "tick": {
-      if (!state.isActive) return state;
-      const secondsLeft = Math.max(0, state.secondsLeft - 1);
-      return { ...state, secondsLeft, isActive: secondsLeft > 0 };
+      if (state.endsAt === null) return state;
+      const left = remainingAt(state, action.now);
+      if (left === 0) return { ...state, endsAt: null, remainingMs: 0, now: action.now };
+      return { ...state, now: action.now };
     }
-    case "toggle":
-      if (!state.isActive && state.secondsLeft === 0) return state;
-      return { ...state, isActive: !state.isActive };
+    case "toggle": {
+      if (state.endsAt !== null) {
+        return { ...state, endsAt: null, remainingMs: remainingAt(state, action.now), now: action.now };
+      }
+      if (state.remainingMs <= 0) return state;
+      return { ...state, endsAt: action.now + state.remainingMs, now: action.now };
+    }
     case "reset":
-      return { ...state, isActive: false, secondsLeft: action.targetSeconds };
+      return { ...state, endsAt: null, remainingMs: action.targetSeconds * 1000 };
     case "load":
-      return {
-        drillKey: action.drillKey,
-        isActive: false,
-        secondsLeft: action.targetSeconds,
-      };
+      return { drillKey: action.drillKey, endsAt: null, remainingMs: action.targetSeconds * 1000, now: 0 };
     default:
       return state;
   }
@@ -60,20 +69,32 @@ export function DrillStopwatch({
 }) {
   const drillKey = `${drillTitle}:${targetSeconds}`;
   const [state, dispatch] = useReducer(timerReducer, {
-    secondsLeft: targetSeconds,
-    isActive: false,
+    remainingMs: targetSeconds * 1000,
+    endsAt: null,
+    now: 0,
     drillKey,
   });
+  const isActive = state.endsAt !== null;
+  const secondsLeft = Math.ceil((isActive ? Math.max(0, (state.endsAt ?? 0) - state.now) : state.remainingMs) / 1000);
 
   if (state.drillKey !== drillKey) {
     dispatch({ type: "load", drillKey, targetSeconds });
   }
 
+  // Remaining time comes from the end timestamp, so throttled timers on a locked phone lose nothing.
   useEffect(() => {
-    if (!state.isActive) return;
-    const interval = setInterval(() => dispatch({ type: "tick" }), 1000);
-    return () => clearInterval(interval);
-  }, [state.isActive]);
+    if (!isActive) return;
+    const tick = () => dispatch({ type: "tick", now: Date.now() });
+    const interval = setInterval(tick, 250);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") tick();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [isActive]);
 
   const formatTime = (totalSec: number) => {
     const mins = Math.floor(totalSec / 60);
@@ -86,7 +107,7 @@ export function DrillStopwatch({
   const seconds = targetSeconds % 60;
 
   function setBlock(next: number) {
-    if (state.isActive) return;
+    if (isActive) return;
     onTargetSecondsChange?.(clampSeconds(next));
   }
 
@@ -94,16 +115,16 @@ export function DrillStopwatch({
     <div className="ink-panel w-full rounded-xl bg-slate-900 p-4 text-white shadow-lg">
       <h3 className="text-lg font-bold text-slate-200">{drillTitle}</h3>
       <p className="mt-1 text-sm font-medium text-slate-300">
-        {state.secondsLeft === 0 ? "Block complete" : state.isActive ? "Running" : "Ready"}
+        {secondsLeft === 0 ? "Block complete" : isActive ? "Running" : "Ready"}
       </p>
       <div className="my-4 text-center font-mono text-6xl tracking-wider text-emerald-400">
-        {formatTime(state.secondsLeft)}
+        {formatTime(secondsLeft)}
       </div>
       <div className="mb-4 rounded-lg bg-slate-800 p-3">
         <p className="text-center text-xs font-bold uppercase tracking-wide text-amber-300">Set your time</p>
         <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
-          <TimeStep label="-1 min" onClick={() => setBlock(targetSeconds - 60)} disabled={state.isActive} />
-          <TimeStep label="-15s" onClick={() => setBlock(targetSeconds - 15)} disabled={state.isActive} />
+          <TimeStep label="-1 min" onClick={() => setBlock(targetSeconds - 60)} disabled={isActive} />
+          <TimeStep label="-15s" onClick={() => setBlock(targetSeconds - 15)} disabled={isActive} />
           <label className="text-center text-xs font-semibold text-slate-300">
             Min
             <input
@@ -111,7 +132,7 @@ export function DrillStopwatch({
               type="number"
               min={0}
               max={30}
-              disabled={state.isActive}
+              disabled={isActive}
               value={minutes}
               onChange={(event) => {
                 const nextMinutes = Number(event.target.value);
@@ -128,7 +149,7 @@ export function DrillStopwatch({
               type="number"
               min={0}
               max={59}
-              disabled={state.isActive}
+              disabled={isActive}
               value={seconds}
               onChange={(event) => {
                 const nextSeconds = Number(event.target.value);
@@ -138,13 +159,13 @@ export function DrillStopwatch({
               className="mt-1 block h-11 w-16 rounded-md bg-white text-center text-lg font-bold text-slate-950"
             />
           </label>
-          <TimeStep label="+15s" onClick={() => setBlock(targetSeconds + 15)} disabled={state.isActive} />
-          <TimeStep label="+1 min" onClick={() => setBlock(targetSeconds + 60)} disabled={state.isActive} />
+          <TimeStep label="+15s" onClick={() => setBlock(targetSeconds + 15)} disabled={isActive} />
+          <TimeStep label="+1 min" onClick={() => setBlock(targetSeconds + 60)} disabled={isActive} />
         </div>
         {suggested !== targetSeconds ? (
           <button
             type="button"
-            disabled={state.isActive}
+            disabled={isActive}
             onClick={() => setBlock(suggested)}
             className="mt-2 w-full text-sm font-semibold text-emerald-300 underline-offset-2 hover:underline disabled:opacity-50"
           >
@@ -158,11 +179,11 @@ export function DrillStopwatch({
         <Button
           type="button"
           size="icon-lg"
-          aria-label={state.isActive ? "Pause drill" : "Start drill"}
-          onClick={() => dispatch({ type: "toggle" })}
+          aria-label={isActive ? "Pause drill" : "Start drill"}
+          onClick={() => dispatch({ type: "toggle", now: Date.now() })}
           className="size-16 rounded-full"
         >
-          {state.isActive ? <Pause className="size-8" /> : <Play className="size-8" />}
+          {isActive ? <Pause className="size-8" /> : <Play className="size-8" />}
         </Button>
         <Button
           type="button"

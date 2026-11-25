@@ -5,7 +5,7 @@ const origin = `http://127.0.0.1:${process.env.PLAYWRIGHT_PORT || "4187"}`;
 
 export default defineConfig({
   testDir: "./tests",
-  testMatch: "**/*.spec.ts",
+  testMatch: ["**/*.spec.ts", "**/*.test.ts"],
   workers: 1,
   forbidOnly: !!process.env.CI,
   retries: 0,
@@ -24,6 +24,11 @@ export default defineConfig({
     url: `${origin}${basePath}/`,
     reuseExistingServer: false,
     timeout: 120_000,
-    env: { NEXT_TELEMETRY_DISABLED: "1" },
+    env: {
+      NEXT_TELEMETRY_DISABLED: "1",
+      NEXT_PUBLIC_AUTH_MODE: "demo",
+      NEXT_PUBLIC_SUPABASE_URL: "",
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "",
+    },
   },
 });
