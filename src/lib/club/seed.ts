@@ -3,8 +3,6 @@ import type { ClubAgeGroup, DrillTemplate, SetupDiagram } from "@/lib/club/catal
 import { DEFAULT_PITCH_COLOR, type DrillBoard } from "@/lib/club/board";
 import { mergeLibraryBoards } from "@/lib/club/library-boards";
 import { clubLibrary } from "@/lib/club/library";
-import { formatRegNumber, splitName } from "@/lib/club/registration";
-import { placeOnU12Prem, playerId, SQUAD_TEAM_ID, U12_SQUAD } from "@/lib/club/roster";
 
 export interface PaymentRecord {
   id: string;
@@ -124,11 +122,35 @@ export interface SessionPlan {
 
 export interface SavedMatch {
   id: string;
+  clubId?: string;
   teamId: string;
   opponent: string;
   playedOn: string;
   minutes: { playerId: string; minutesPlayed: number }[];
+  /** Added for sync. Older saved matches lack these. */
+  formation?: string;
+  durationSeconds?: number;
+  ourScore?: number;
+  theirScore?: number;
+  players?: { playerId: string; name: string; squadNumber: number; position: string; startedOnPitch: boolean }[];
+  /** Substitutions in match-clock milliseconds (the rotation log). */
+  events?: MatchEvent[];
+  layout?: { playerId: string; x: number; y: number }[] | null;
+  teamLabel?: string;
+  /** Club mode: the club's (Supabase) team id this match belongs to. */
+  cloudTeamId?: string;
+  /** ISO time of the last local edit; drives last-write-wins sync. */
+  updatedAt?: string;
 }
+
+export interface MatchEvent {
+  kind: "SUB" | "GOAL_FOR" | "GOAL_AGAINST";
+  atMs: number;
+  offId?: string;
+  onId?: string;
+}
+
+export type MatchExtra = Omit<SavedMatch, "id" | "clubId" | "teamId" | "opponent" | "playedOn" | "minutes" | "updatedAt">;
 
 export interface CustomFormation {
   id: string;
@@ -155,43 +177,12 @@ export interface ClubData {
 }
 
 export function createSeed(): ClubData {
-  const placed = placeOnU12Prem(
-    ensureYouthAges([]),
-    U12_SQUAD.map((player, index) => {
-      const { firstName, surname } = splitName(player.name);
-      return {
-        id: playerId(player.name),
-        name: player.name,
-        firstName,
-        surname,
-        regNumber: formatRegNumber(index + 1),
-        idNumber: "",
-        mobile: "",
-        correspondence: [],
-        squadNumber: player.squadNumber,
-        position: "Central midfielder",
-        positions: [] as string[],
-        teamId: SQUAD_TEAM_ID,
-        homework: "",
-        photo: "",
-        seasonFee: 0,
-        sponsoredAmount: 0,
-        feeDueDate: "",
-        payments: [],
-        paymentPlan: null,
-        promise: null,
-        guardianName: "",
-        guardianEmail: "",
-        accessPin: "",
-      };
-    }),
-  );
   return {
     clubKind: "bnfc",
     customFormations: [],
-    ageGroups: placed.ageGroups,
+    ageGroups: ensureYouthAges([]),
     coaches: [],
-    players: placed.players,
+    players: [],
     drills: clubLibrary.map((drill) => ({
       ...drill,
       coachingPoints: [...drill.coachingPoints],
@@ -203,7 +194,7 @@ export function createSeed(): ClubData {
     weeklyReports: [],
     sessions: [],
     matches: [],
-    coachTeamId: placed.teamId,
+    coachTeamId: null,
     boards: mergeLibraryBoards({}),
     matchPitchColor: DEFAULT_PITCH_COLOR,
   };

@@ -2367,6 +2367,7 @@
         }
       },
       renderSavedTeamsList() {
+        this.refreshFootballTeamCaches();
         const list = document.getElementById('savedTeamsList');
         const countBadge = document.getElementById('savedTeamsCount');
         const teams = (AppState.teams || []).filter(team => !AppState.readOnly || (team.readOnly && team.ownerId === AppState.ownerId));
@@ -2498,6 +2499,7 @@
       },
       loadTeam(teamId, incomingShared = false) {
         if (!AppState.teams) return;
+        this.refreshFootballTeamCaches();
         const team = AppState.teams.find(t => t.id === teamId);
         if (!team) return;
         if (!incomingShared && AppState.readOnly && (!team.readOnly || team.ownerId !== AppState.ownerId)) {
@@ -2507,7 +2509,10 @@
         if (!incomingShared && (!AppState.currentTeamId || AppState.teams.some(t => t.id === AppState.currentTeamId))) {
           this.syncActiveTeamSquad(true);
         }
-        if (!incomingShared) this.captureActiveTeamMatch();
+        if (!incomingShared) {
+          this.captureActiveTeamMatch();
+          this.bindFootballTeam(team);
+        }
         AppState.currentTeamId = team.id;
         AppState.currentTeamName = team.name;
         this.setHeaderTeamBadge();
@@ -2647,6 +2652,73 @@
         status.innerText = Object.values(this._storageFailures).join(' ');
         if (status.innerText) status.classList.remove('hidden');
         else status.classList.add('hidden');
+      },
+      footballTeamSnapshot(team) {
+        // Only Football-bound local teams participate. Manual, unknown and Pro-owned
+        // saved teams keep their own data and existing permission rules.
+        const local = value => value && typeof value === 'object' && !Array.isArray(value) &&
+          value.ownerId === undefined && value.cloudTeamId === undefined && value.readOnly === undefined;
+        if (!local(team) || typeof team.id !== 'string' || typeof team.sharedInstallationId !== 'string') return null;
+        try {
+          const installationId = localStorage.getItem('cs.lite.installation.v1');
+          if (team.sharedInstallationId !== installationId) return null;
+          const binding = JSON.parse(localStorage.getItem('cs.football.active-roster.v1') || 'null');
+          if (!binding || binding.installationId !== installationId || typeof binding.clubId !== 'string') return null;
+          let clubId = team.footballClubId;
+          if (typeof clubId !== 'string' || !clubId.trim() || clubId.length > 200) {
+            const saved = JSON.parse(localStorage.getItem('Clubstride Mobile_teams') || 'null');
+            if (!binding || binding.teamId !== team.id || binding.installationId !== installationId ||
+              typeof binding.clubId !== 'string' || !Array.isArray(saved)) return null;
+            const row = saved.find(value => local(value) && value.id === team.id &&
+              value.sharedInstallationId === installationId && value.footballClubId === binding.clubId);
+            if (!row) return null;
+            clubId = binding.clubId;
+          }
+          if (!clubId.trim() || clubId.length > 200 || clubId !== binding.clubId) return null;
+          const key = `cs.football.roster.v1.${installationId}.club-${encodeURIComponent(clubId)}.${team.id}`;
+          const snapshot = JSON.parse(localStorage.getItem(key) || 'null');
+          if (!local(snapshot) || snapshot.teamId !== team.id || snapshot.installationId !== installationId) return null;
+          const content = this.validateSharedRoster(snapshot);
+          return { clubId, installationId, revision: snapshot.revision, content };
+        } catch (_) {
+          // A missing, malformed or unavailable optional cache never erases a good Lite team.
+          return null;
+        }
+      },
+      refreshFootballTeamCaches() {
+        (AppState.teams || []).forEach(team => {
+          const cached = this.footballTeamSnapshot(team);
+          if (!cached) return;
+          team.footballClubId = cached.clubId;
+          if (team.id === AppState.currentTeamId) {
+            // Canonical roster application owns the active squad. Remember a cache
+            // only after that squad actually contains it, preserving later Lite edits.
+            if (JSON.stringify(cached.content) === JSON.stringify(this.currentSharedRosterContent(cached.installationId))) {
+              team.footballRosterRevision = cached.revision;
+            }
+            return;
+          }
+          const previous = Date.parse(team.footballRosterRevision);
+          if (Number.isFinite(previous) && Date.parse(cached.revision) <= previous) return;
+          team.name = cached.content.teamName;
+          team.squad = JSON.parse(JSON.stringify(cached.content.players));
+          team.footballRosterRevision = cached.revision;
+        });
+      },
+      bindFootballTeam(team) {
+        if (AppState.readOnly) return false;
+        const cached = this.footballTeamSnapshot(team);
+        if (!cached) return false;
+        try {
+          localStorage.setItem('cs.football.active-roster.v1', JSON.stringify({
+            clubId: cached.clubId, installationId: cached.installationId, teamId: team.id
+          }));
+          this.reportStorageFailure('footballRoster', '');
+          return true;
+        } catch (_) {
+          this.reportStorageFailure('footballRoster', 'Squad selection could not be saved. Reopen this squad from Football before syncing player changes.');
+          return false;
+        }
       },
       syncActiveTeamSquad(ensureSaved = false) {
         if (!AppState.teams) AppState.teams = [];
@@ -3460,6 +3532,8 @@
         if (this._storageLoadFailed) return false;
         try {
           this.syncActiveTeamSquad();
+          // Merge inactive Football updates before saving our whole legacy team list.
+          this.refreshFootballTeamCaches();
           localStorage.setItem('Clubstride Mobile_squad', JSON.stringify(AppState.squad));
           if (!AppState.readOnly) {
             localStorage.setItem('Clubstride Mobile_match', JSON.stringify(AppState.match));

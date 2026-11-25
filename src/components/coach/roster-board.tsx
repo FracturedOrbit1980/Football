@@ -37,7 +37,6 @@ export function RosterBoard() {
         position: formatPosition(p),
         photo: p.photo,
       })),
-      activeCoach
     );
   };
   const [selectedId, setSelectedId] = useState("");
@@ -103,14 +102,14 @@ export function RosterBoard() {
             </div>
             <div className="flex flex-wrap gap-2">
               <a
-                href="./lite/"
+                href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/lite/`}
                 onClick={() => syncActiveSquad()}
                 className="inline-flex h-10 items-center justify-center rounded-xl bg-teal-400 px-4 text-xs font-black uppercase tracking-wide text-slate-950 transition hover:bg-teal-300 active:scale-95 shadow-sm"
               >
                 ⚡ Open Lite (Pitch-side)
               </a>
               <a
-                href="./pro/"
+                href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/pro/`}
                 onClick={() => syncActiveSquad()}
                 className="inline-flex h-10 items-center justify-center rounded-xl border border-amber-400/40 bg-amber-400/20 px-4 text-xs font-black uppercase tracking-wide text-amber-300 transition hover:bg-amber-400/30 active:scale-95 shadow-sm"
               >

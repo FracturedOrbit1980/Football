@@ -31,11 +31,12 @@ export function PeopleBoard() {
 
   const syncTeam = (targetTeamId: string) => {
     if (!targetTeamId) return;
-    const targetTeam = teams.find((t) => t.id === targetTeamId);
+    const currentState = useClubStore.getState();
+    const targetTeam = ensureYouthAges(currentState.ageGroups).flatMap((group) =>
+      group.teams.map((team) => ({ ...team, ageGroup: ageLabel(group.name) })),
+    ).find((team) => team.id === targetTeamId);
     if (!targetTeam) return;
-    const currentPlayers = useClubStore.getState().players;
-    const teamPlayers = currentPlayers.filter((p) => p.teamId === targetTeamId);
-    const coach = coaches.find((c) => c.teamId === targetTeamId);
+    const teamPlayers = currentState.players.filter((p) => p.teamId === targetTeamId);
     syncTeamToLite(
       { id: targetTeam.id, name: `${targetTeam.ageGroup} · ${targetTeam.division ?? targetTeam.name}` },
       teamPlayers.map((p) => ({
@@ -45,7 +46,7 @@ export function PeopleBoard() {
         position: formatPosition(p),
         photo: p.photo,
       })),
-      coach?.name
+      { activate: false },
     );
   };
 
