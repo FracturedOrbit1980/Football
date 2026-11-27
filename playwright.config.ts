@@ -1,4 +1,9 @@
 import { defineConfig } from "@playwright/test";
+import { register } from "tsconfig-paths";
+import tsconfig from "./tsconfig.json";
+
+// Dynamic imports of the application stores also load CommonJS dependencies in the worker.
+register({ baseUrl: __dirname, paths: tsconfig.compilerOptions.paths, addMatchAll: false });
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 const origin = `http://127.0.0.1:${process.env.PLAYWRIGHT_PORT || "4187"}`;
