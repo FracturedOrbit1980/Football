@@ -199,10 +199,9 @@ coach, opens each tier, and checks the visible squad after reload. Pro controls
 cover an unnamed local squad and rejection of an owned cloud squad without
 membership. No live login or cloud service is used.
 
-The checked-in Pro Expo HTML hardcodes `/Football/pro/` assets. Its rendered
-squad tests therefore run under `/Football`; the empty-prefix run still tests
-all four navigation destinations and the complete Lite journey. Those explicit
-Pro skips are a separate packaging limitation, not a handoff pass.
+The checked-in Pro Expo export loads its bundle, favicon and brand images
+relative to its entry page. The Pro squad and asset checks run at both the
+domain root and the `/Football` deployment prefix.
 
 `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` can select an installed Chromium, and
 `PLAYWRIGHT_PORT` can change the default loopback test port (4187). If a local

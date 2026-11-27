@@ -66,8 +66,6 @@ for (const route of ["roster", "match"]) {
 
 for (const tier of ["lite", "pro"]) {
   test(`assign a coach and squad in Football, then open ${tier}`, async ({ page }, testInfo) => {
-    // Pro's checked-in Expo HTML references /Football/pro assets. Do not mask this with server aliases.
-    test.skip(tier === "pro" && basePath !== "/Football", "The bundled Pro entry hardcodes /Football/pro asset paths.");
     await seed(page, false);
     await page.goto(`${basePath}/coach/`);
     await page.locator('[data-age-tile="U12"]').click();
@@ -106,15 +104,29 @@ for (const tier of ["lite", "pro"]) {
 }
 
 test("Pro still selects an unassigned local squad", async ({ page }) => {
-  test.skip(basePath !== "/Football", "Pro's bundled assets require /Football.");
   await seed(page, true, false);
   await page.goto(`${basePath}/coach/roster/`);
   await page.getByRole("link", { name: /Open Pro/ }).click();
   await expectSquad(page, "pro");
 });
 
+test("Pro loads its favicon and both brand images from the deployment", async ({ page }) => {
+  await seed(page);
+  await page.goto(`${basePath}/coach/roster/`);
+  await page.getByRole("link", { name: /Open Pro/ }).click();
+  const favicon = `${origin}${basePath}/pro/favicon.ico`;
+  await expect(page.locator('link[rel="icon"]')).toHaveJSProperty("href", favicon);
+  expect((await page.request.get(favicon)).status()).toBe(200);
+
+  for (const name of ["Switch to Lite view", "Switch to Clubstride Pro"]) {
+    const button = page.getByRole("button", { name, exact: true });
+    const imageWidth = () => button.locator("img").evaluate((image: HTMLImageElement) => image.naturalWidth);
+    await expect.poll(imageWidth).toBeGreaterThan(0);
+    await button.click();
+  }
+});
+
 test("Pro does not expose an owned cloud squad without membership", async ({ page }) => {
-  test.skip(basePath !== "/Football", "Pro's bundled assets require /Football.");
   await seed(page);
   await page.goto(`${basePath}/`);
   await page.evaluate(() => localStorage.setItem("cs.lite.roster.v1", JSON.stringify({
