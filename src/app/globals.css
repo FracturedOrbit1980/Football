@@ -450,8 +450,29 @@ html.dark .editor-descriptions {
 }
 
 html.dark .text-emerald-700,
-html.dark .text-emerald-800 {
-  color: #2dd4bf;
+html.dark .text-emerald-800,
+html.dark .text-emerald-900 {
+  color: #5eead4;
+}
+
+html.dark .text-rose-700,
+html.dark .text-rose-800,
+html.dark .text-rose-900 {
+  color: #fda4af;
+}
+
+html.dark .bg-emerald-50,
+html.dark .bg-emerald-100 {
+  background-color: #134e4a;
+}
+
+html.dark .bg-rose-100 {
+  background-color: #881337;
+}
+
+html.dark .bg-amber-100 {
+  background-color: #78350f;
+  color: #fef3c7;
 }
 
 .btn-shade,

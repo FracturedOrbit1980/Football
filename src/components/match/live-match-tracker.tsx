@@ -1,7 +1,7 @@
 "use client";
 
 import { Pause, Play, RotateCcw } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +27,38 @@ function formatClock(totalSeconds: number) {
   const mins = Math.floor(totalSeconds / 60);
   const secs = totalSeconds % 60;
   return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+}
+
+function MatchReset({ disabled, onReset }: { disabled: boolean; onReset: () => void }) {
+  const [confirming, setConfirming] = useState(false);
+  const resetButton = useRef<HTMLButtonElement>(null);
+  const cancelButton = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (confirming) cancelButton.current?.focus();
+  }, [confirming]);
+
+  return (
+    <div className={confirming ? "w-full rounded-lg border border-slate-600 p-3 text-center" : ""}>
+      <Button ref={resetButton} type="button" size="lg" variant="secondary" className="h-14 min-w-36 text-base"
+        disabled={disabled} aria-expanded={confirming} onClick={() => setConfirming(true)}>
+        <RotateCcw className="size-5" />
+        Reset
+      </Button>
+      {confirming ? (
+        <div role="group" aria-label="Confirm match reset" className="mt-3 space-y-3">
+          <p>Start a new match? This clears the current clock, score, events and player minutes. Saved matches stay in your history.</p>
+          <div className="flex flex-wrap justify-center gap-2">
+            <Button ref={cancelButton} type="button" variant="secondary" className="min-h-11" onClick={() => {
+              setConfirming(false);
+              resetButton.current?.focus();
+            }}>Keep match</Button>
+            <Button type="button" variant="destructive" className="min-h-11" onClick={onReset}>Start new match</Button>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 export function LiveMatchTracker() {
@@ -378,12 +410,10 @@ export function LiveMatchTracker() {
             {isClockRunning ? <Pause className="size-5" /> : <Play className="size-5" />}
             {isClockRunning ? "Pause" : "Start"}
           </Button>
-          <Button
-            type="button"
-            size="lg"
-            variant="secondary"
-            className="h-14 min-w-36 text-base"
-            onClick={() => {
+          <MatchReset
+            key={JSON.stringify([clubId, teamId, matchId])}
+            disabled={!scopeMatches || !matchId}
+            onReset={() => {
               if (!isSelectedMatch()) return;
               resetMatch(selectedSquad());
               setSavedMatchId("");
@@ -392,10 +422,7 @@ export function LiveMatchTracker() {
               setSelectedOff(null);
               setSelectedOn(null);
             }}
-          >
-            <RotateCcw className="size-5" />
-            Reset
-          </Button>
+          />
           <Button
             type="button"
             size="lg"

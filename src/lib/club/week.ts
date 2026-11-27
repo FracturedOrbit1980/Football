@@ -31,11 +31,18 @@ export function weekDates(weekStart: string) {
   return Array.from({ length: 7 }, (_, index) => addDays(weekStart, index));
 }
 
+const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+// Old records can contain a display label without a year. Keep it as entered.
+export function formatDate(value: string, includeWeekday = false) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const date = new Date(`${value}T00:00:00Z`);
+  if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== value) return value;
+  const [year, month, day] = value.split("-");
+  const label = `${day}/${month}/${year}`;
+  return includeWeekday ? `${weekdays[date.getUTCDay()]} ${label}` : label;
+}
+
 export function formatDay(iso: string) {
-  return parseIso(iso).toLocaleDateString("en-ZA", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  return formatDate(iso, true);
 }

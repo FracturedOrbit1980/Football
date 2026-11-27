@@ -1,4 +1,6 @@
-const CACHE_NAME = 'Clubstride Lite-v19';
+const scope = new URL(self.registration.scope);
+const cachePrefix = `clubstride-lite:${encodeURIComponent(scope.pathname)}:`;
+const CACHE_NAME = cachePrefix + 'v20';
 const ASSETS = [
   './',
   './index.html',
@@ -68,7 +70,9 @@ const ASSETS = [
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)).then(() => self.skipWaiting())
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(ASSETS.map((path) => new Request(new URL(path, scope), { cache: 'reload' }))))
+      .then(() => self.skipWaiting())
   );
 });
 
@@ -76,35 +80,41 @@ self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) return caches.delete(key);
-        })
+        keys.filter((key) => key.startsWith(cachePrefix) && key !== CACHE_NAME)
+          .map((key) => caches.delete(key))
       );
     }).then(() => self.clients.claim())
   );
 });
 
-self.addEventListener('fetch', (e) => {
-  const req = e.request;
-  if (req.method !== 'GET') return;
-
-  // Network-first with a cache fallback: a deployed fix has to actually reach installed PWAs, and
-  // cache-first pinned every device to whichever index.html was cached at install. Serving the cache
-  // copy of a *missing* asset used to hand back index.html, which broke the PDF engine outright.
-  if (req.url.startsWith(self.location.origin)) {
-    e.respondWith(
-      fetch(req).then((res) => {
-        if (res && res.ok) {
-          const copy = res.clone();
-          e.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.put(req, copy)));
-        }
-        return res;
-      }).catch(() => caches.match(req).then((cached) => cached || (req.mode === 'navigate' ? caches.match('./index.html') : Response.error())))
-    );
-    return;
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'clubstride-offline-caches') {
+    event.ports[0]?.postMessage({ cacheNames: [CACHE_NAME] });
   }
+});
 
-  e.respondWith(
-    caches.match(req).then((res) => res || fetch(req))
-  );
+async function networkFirst(request) {
+  const cache = await caches.open(CACHE_NAME);
+  try {
+    const response = await fetch(request);
+    if (response.status === 200 && !response.redirected) {
+      await cache.put(request, response.clone()).catch(() => undefined);
+    }
+    return response;
+  } catch {
+    const cached = await cache.match(request, { ignoreSearch: request.mode === 'navigate' });
+    if (cached) return cached;
+    if (request.mode === 'navigate') {
+      return await cache.match(new URL('./index.html', scope)) || Response.error();
+    }
+    return Response.error();
+  }
+}
+
+self.addEventListener('fetch', (event) => {
+  const request = event.request;
+  const url = new URL(request.url);
+  if (request.method !== 'GET' || request.headers.has('range') ||
+      url.origin !== scope.origin || !url.pathname.startsWith(scope.pathname)) return;
+  event.respondWith(networkFirst(request));
 });

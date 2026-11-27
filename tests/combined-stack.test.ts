@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { createJSONStorage } from "zustand/middleware";
+import { formatDate, formatDay } from "../src/lib/club/week";
 import type { MatchExtra } from "../src/lib/club/seed";
 import type { SquadEntry } from "../src/stores/match-store";
 
@@ -134,6 +135,40 @@ test("scoped paused recovery retains rich scores, events, formation and layout",
   recovered.getState().openMatch(clubId, teamId, squad);
   expect(recovered.getState().matchId).toBe(expected.matchId);
   expect(recovered.getState().events).toEqual(expected.events);
+});
+
+test("calendar labels are day-first and preserve unknown or invalid stored dates", () => {
+  expect(formatDate("2026-01-05")).toBe("05/01/2026");
+  expect(formatDay("2024-02-29")).toBe("Thu 29/02/2024");
+  for (const stored of ["28 Oct", "2026-02-29", "2026-13-02", ""]) {
+    expect(formatDate(stored)).toBe(stored);
+    expect(formatDay(stored)).toBe(stored);
+  }
+});
+
+test("new local saves include the year and retrying a legacy match preserves its date", () => {
+  const midnight = new NativeDate(2026, 9, 28, 0, 5).getTime();
+  class FixedDate extends NativeDate {
+    constructor(value?: string | number) { super(value ?? midnight); }
+    static now() { return midnight; }
+  }
+  globalThis.Date = FixedDate as unknown as DateConstructor;
+  const { club, match } = seedClub();
+  club.getState().saveSession(teamId, "QA date check", []);
+  expect(club.getState().sessions[0].savedOn).toBe("2026-10-28");
+  const { matchId, opponent, players } = match.getState();
+  const minutes = players.map(({ playerId, minutesPlayed }) => ({ playerId, minutesPlayed }));
+  const save = () => club.getState().saveMatch(matchId, clubId, teamId, opponent, minutes);
+  expect(save()).toBe(true);
+  const saved = club.getState().matches[0];
+  expect(saved.playedOn).toBe("2026-10-28");
+  expect(club.getState().attendance.map(row => row.when)).toEqual(minutes.map(() => "2026-10-28"));
+
+  club.setState({ matches: [{ ...saved, playedOn: "28 Oct" }] });
+  expect(save()).toBe(true);
+  expect(club.getState().matches.map(row => row.playedOn)).toEqual(["28 Oct"]);
+  expect(club.getState().attendance.map(row => row.when)).toEqual(minutes.map(() => "28 Oct"));
+  expect(syncModule.matchRow("qa-cloud-club", club.getState().matches[0]).played_on).toBe("28 Oct");
 });
 
 test("rich MatchExtra survives idempotent local saving and authorized cloud payload mapping", () => {

@@ -327,7 +327,7 @@
   <!-- HEADER -->
   <header class="sticky top-0 z-40 bg-obsidian-950/85 backdrop-blur-md border-b border-white/10 px-4 py-3 flex items-center justify-between">
     <div class="flex items-center space-x-3 min-w-0">
-      <a id="brandSwitch" href="https://fracturedorbit1980.github.io/Football/pro/" onclick="return App.openProUpgrade(event)" class="chip-btn inline-flex items-center min-w-0" title="Switch to Clubstride Pro" aria-label="Switch to Clubstride Pro">
+      <a id="brandSwitch" href="../pro/" onclick="return App.openProUpgrade(event)" class="chip-btn inline-flex items-center min-w-0" title="Switch to Clubstride Pro" aria-label="Switch to Clubstride Pro">
         <img id="appHeaderIcon" src="./assets/brand/L1_lockup_dark.svg" alt="Clubstride Lite" class="h-9 w-auto max-w-[190px] object-contain transition hover:opacity-80 active:scale-95" />
       </a>
     </div>
@@ -358,10 +358,10 @@
       <span class="text-[9px] font-black uppercase tracking-wider text-slate-400 block">View</span>
       <div class="grid grid-cols-2 gap-1.5" role="group" aria-label="Clubstride view">
         <button type="button" id="liteViewBtn" aria-pressed="true" class="view-tab chip-btn py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-cyber-mint/20 border border-cyber-mint/40 text-cyber-mint">Lite</button>
-        <a id="proViewBtn" href="https://fracturedorbit1980.github.io/Football/pro/" onclick="return App.openProUpgrade(event)" aria-pressed="false" aria-label="Switch to Clubstride Pro" class="view-tab chip-btn py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-obsidian-900 border border-white/10 text-slate-300 hover:text-white active:scale-95 transition">Pro</a>
+        <a id="proViewBtn" href="../pro/" onclick="return App.openProUpgrade(event)" aria-pressed="false" aria-label="Switch to Clubstride Pro" class="view-tab chip-btn py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider bg-obsidian-900 border border-white/10 text-slate-300 hover:text-white active:scale-95 transition">Pro</a>
       </div>
     </div>
-    <p id="proToggleNote" role="status" aria-live="polite" class="hidden text-[11px] leading-relaxed px-1" style="color: var(--cs-amber-300);">You're offline. Pro needs a connection - Lite keeps working offline.</p>
+    <p id="proToggleNote" role="status" aria-live="polite" class="hidden text-[11px] leading-relaxed px-1" style="color: var(--cs-amber-300);">Pro isn’t saved for offline use on this device. Lite keeps working offline.</p>
     
     <!-- MATCH METADATA STATUS POD -->
     <div class="glass-card rounded-lite p-3.5 flex items-center justify-between">
@@ -693,9 +693,9 @@
         </div>
       </div>
 
-        <a id="upgradeProCta" href="https://fracturedorbit1980.github.io/Football/pro/" onclick="return App.openProUpgrade(event)" class="chip-btn w-full py-3 rounded-2xl font-black text-xs uppercase tracking-wider text-center flex items-center justify-center active:scale-95 transition" style="background: linear-gradient(90deg, var(--cs-amber-300), var(--cs-amber-500)); color: #0b0f17; box-shadow: 0 0 22px rgba(251, 191, 36, 0.22);">Upgrade to Pro</a>
-        <p class="text-[10px] text-slate-400 leading-relaxed">Opens Clubstride Pro inside this app with a Back to Lite control. Your Lite squad and saved matches come with you - sign in or create a coach account to use them. Pro needs a connection; Lite keeps working offline.</p>
-        <p id="upgradeProOffline" role="status" aria-live="polite" class="hidden text-[11px] leading-relaxed" style="color: var(--cs-amber-300);">You're offline. Open Clubstride Pro once you're back online - Lite keeps working offline.</p>
+        <a id="upgradeProCta" href="../pro/" onclick="return App.openProUpgrade(event)" class="chip-btn w-full py-3 rounded-2xl font-black text-xs uppercase tracking-wider text-center flex items-center justify-center active:scale-95 transition" style="background: linear-gradient(90deg, var(--cs-amber-300), var(--cs-amber-500)); color: #0b0f17; box-shadow: 0 0 22px rgba(251, 191, 36, 0.22);">Upgrade to Pro</a>
+        <p class="text-[10px] text-slate-400 leading-relaxed">Opens Clubstride Pro inside this app with a Back to Lite control. Your Lite squad and saved matches come with you. You can open Pro offline after Football saves it on this device. Account and cloud features need a connection.</p>
+        <p id="upgradeProOffline" role="status" aria-live="polite" class="hidden text-[11px] leading-relaxed" style="color: var(--cs-amber-300);">Pro isn’t saved for offline use on this device. Open Football while online to prepare it.</p>
       </div>
     </section>
     <!-- TAB 4: STATS SUBTOTALS & AGGREGATIONS -->
@@ -811,7 +811,7 @@
           <div>
             <h3 class="text-sm font-bold text-white flex items-center space-x-2">
               <span>Coach Hub</span>
-              <span id="hubConnectionBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-cyber-mint/20 text-cyber-mint border border-cyber-mint/30 font-bold">100% Offline Ready</span>
+              <span id="hubConnectionBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-cyber-mint/20 text-cyber-mint border border-cyber-mint/30 font-bold">Checking connection</span>
             </h3>
             <p class="text-xs text-slate-400 mt-0.5">Clubstride Lite pitch ledger boundaries &amp; connected Pro cloud features</p>
           </div>
@@ -869,7 +869,7 @@
               </div>
               <p class="text-[11px] text-slate-400 leading-snug">Schedule weekly training sessions, drill practices and track player physical load.</p>
             </div>
-            <a href="https://fracturedorbit1980.github.io/Football/pro/" onclick="return App.openProUpgrade(event)" class="chip-btn py-2 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-slate-200 text-xs font-semibold text-center transition">
+            <a href="../pro/" onclick="return App.openProUpgrade(event)" class="chip-btn py-2 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-slate-200 text-xs font-semibold text-center transition">
               Open Training in Pro →
             </a>
           </div>
@@ -882,7 +882,7 @@
               </div>
               <p class="text-[11px] text-slate-400 leading-snug">Digital practice roll-call register. Monitor player attendance rates across the season.</p>
             </div>
-            <a href="https://fracturedorbit1980.github.io/Football/pro/" onclick="return App.openProUpgrade(event)" class="chip-btn py-2 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-slate-200 text-xs font-semibold text-center transition">
+            <a href="../pro/" onclick="return App.openProUpgrade(event)" class="chip-btn py-2 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-slate-200 text-xs font-semibold text-center transition">
               Open Attendance in Pro →
             </a>
           </div>
@@ -895,7 +895,7 @@
               </div>
               <p class="text-[11px] text-slate-400 leading-snug">Sync squad lists, custom formations, kit styles, and game history across devices.</p>
             </div>
-            <a href="https://fracturedorbit1980.github.io/Football/pro/" onclick="return App.openProUpgrade(event)" class="chip-btn py-2 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-slate-200 text-xs font-semibold text-center transition">
+            <a href="../pro/" onclick="return App.openProUpgrade(event)" class="chip-btn py-2 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-slate-200 text-xs font-semibold text-center transition">
               Open Cloud Sync →
             </a>
           </div>
@@ -908,7 +908,7 @@
               </div>
               <p class="text-[11px] text-slate-400 leading-snug">Invite assistant coaches, physios, and managers with role-based match permissions.</p>
             </div>
-            <a href="https://fracturedorbit1980.github.io/Football/pro/" onclick="return App.openProUpgrade(event)" class="chip-btn py-2 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-slate-200 text-xs font-semibold text-center transition">
+            <a href="../pro/" onclick="return App.openProUpgrade(event)" class="chip-btn py-2 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 text-slate-200 text-xs font-semibold text-center transition">
               Manage Staff in Pro →
             </a>
           </div>
@@ -922,7 +922,7 @@
             <h4 class="text-sm font-bold text-white">Open Clubstride Pro</h4>
             <p class="text-xs text-slate-400">Seamlessly runs in-app with instant Back to Lite switch</p>
           </div>
-          <a href="https://fracturedorbit1980.github.io/Football/pro/" onclick="return App.openProUpgrade(event)" class="chip-btn px-4 py-2.5 rounded-xl font-black text-xs uppercase tracking-wide text-center active:scale-95 transition" style="background: linear-gradient(90deg, var(--cs-amber-300), var(--cs-amber-500)); color: #0b0f17; box-shadow: 0 0 18px rgba(251, 191, 36, 0.25);">
+          <a href="../pro/" onclick="return App.openProUpgrade(event)" class="chip-btn px-4 py-2.5 rounded-xl font-black text-xs uppercase tracking-wide text-center active:scale-95 transition" style="background: linear-gradient(90deg, var(--cs-amber-300), var(--cs-amber-500)); color: #0b0f17; box-shadow: 0 0 18px rgba(251, 191, 36, 0.25);">
             Launch Pro
           </a>
         </div>
@@ -1974,45 +1974,56 @@
       },
       registerServiceWorker() {
         if (!('serviceWorker' in navigator)) {
-          this.reportOfflineState(false);
+          this.setOfflineStatus('This browser does not support offline installation.', true);
+          this.toast('Offline mode did not switch on — re-open Clubstride once while online.', 'card-yellow');
           return;
         }
-        // updateViaCache 'none' keeps sw.js out of the HTTP cache, so an installed copy re-reads it on
-        // every launch and a deployed fix actually lands, instead of pinning the build from install day.
-        const opts = { updateViaCache: 'none' };
-        navigator.serviceWorker.register('./sw.js', opts)
-          .then(() => this.reportOfflineState(true))
-          .catch(() => {
-            navigator.serviceWorker.register('./sw.js', opts)
-              .then(() => this.reportOfflineState(true))
-              .catch(err => {
-                console.warn('service worker registration failed:', err);
-                this.reportOfflineState(true, err);
-              });
+        const register = () => navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' });
+        register().catch(register).then(registration => this.reportOfflineState(registration))
+          .catch(err => {
+            console.warn('service worker registration failed:', err);
+            this.reportOfflineState(null);
           });
       },
-      async reportOfflineState(workerSupported, registerError) {
+      async offlineCachesFor(registration, scope) {
+        if (registration?.scope !== scope) return [];
+        const worker = registration.active || registration.waiting || registration.installing;
+        if (!worker) return [];
+        // An enclosing Football worker can already control this tab while Lite is still installing.
+        const names = await new Promise(resolve => {
+          const { port1, port2 } = new MessageChannel();
+          const finish = names => {
+            clearTimeout(timer);
+            worker.removeEventListener('statechange', ask);
+            port1.close();
+            port2.close();
+            resolve(names);
+          };
+          const ask = () => {
+            if (worker.state === 'redundant') return finish([]);
+            if (worker.state !== 'activated') return;
+            worker.removeEventListener('statechange', ask);
+            try { worker.postMessage({ type: 'clubstride-offline-caches' }, [port2]); }
+            catch (_) { finish([]); }
+          };
+          const timer = setTimeout(() => finish([]), worker.state === 'activated' ? 1200 : 8000);
+          port1.onmessage = event => finish(Array.isArray(event.data?.cacheNames) ? event.data.cacheNames : []);
+          worker.addEventListener('statechange', ask);
+          ask();
+        });
+        const existing = await caches.keys();
+        return Promise.all(names.filter(name => existing.includes(name)).map(name => caches.open(name)));
+      },
+      async reportOfflineState(registration) {
         const warn = 'Offline mode did not switch on — re-open Clubstride once while online.';
-        if (!workerSupported) {
-          this.setOfflineStatus('This browser cannot store matches for offline use.', true);
-          this.toast(warn, 'card-yellow');
-          return;
-        }
         try {
-          // A registration can resolve and still cache nothing: cache.addAll rejects if any asset
-          // fails, which leaves the device looking installed with an empty offline cache.
-          await Promise.race([
-            navigator.serviceWorker.ready,
-            new Promise((_, reject) => setTimeout(() => reject(new Error('activation timed out')), 8000)),
-          ]);
-          let stored = 0;
-          for (const key of await caches.keys()) {
-            stored += (await (await caches.open(key)).keys()).length;
-          }
-          if (stored === 0) throw new Error('offline cache is empty');
-          this.setOfflineStatus(`Offline ready • ${stored} files stored`);
+          const stores = await this.offlineCachesFor(registration, new URL('./', location.href).href);
+          const entries = await Promise.all(stores.map(cache => cache.keys()));
+          const stored = entries.flat().length;
+          if (!stored) throw new Error('Lite offline cache is empty');
+          this.setOfflineStatus('Offline ready • ' + stored + ' files stored');
         } catch (err) {
-          console.warn('offline storage incomplete:', err || registerError);
+          console.warn('offline storage incomplete:', err);
           this.setOfflineStatus(warn, true);
           this.toast(warn, 'card-yellow');
         }
@@ -2245,7 +2256,7 @@
         this.syncActiveTeamSquad(true);
         this.publishLiteRoster(false);
         this.publishLiteMatches();
-        this.toast('Saved locally (100% Offline ready)', 'lock');
+        this.toast('Saved on this device', 'lock');
         const badge = document.getElementById('hubConnectionBadge');
         if (badge) badge.innerText = 'Saved Offline (Local)';
         const syncStatus = document.getElementById('offlineSyncStatus');
@@ -2794,7 +2805,9 @@
         });
         window.addEventListener('cs-lite-roster-change', () => this.applySharedRoster());
         window.addEventListener('focus', () => { this.applySharedRoster(); this.applySharedMatches(); });
-        window.addEventListener('message', event => this.handleProMessage(event));
+        window.addEventListener('message', event => {
+          if (event.origin === window.location.origin) this.handleProMessage(event);
+        });
         if (typeof BroadcastChannel !== 'undefined') {
           try {
             this._csChannel = new BroadcastChannel('cs_sync_channel');
@@ -2860,7 +2873,7 @@
                 status: 'ok',
                 roster: updatedRoster,
                 matches: updatedMatches
-              }, '*');
+              }, window.location.origin);
             } catch (_) {}
           }
         }
@@ -2903,7 +2916,7 @@
 
         targets.forEach(t => {
           try {
-            t.postMessage(payload, '*');
+            t.postMessage(payload, window.location.origin);
           } catch (_) {}
         });
 
@@ -2923,7 +2936,7 @@
         };
         const frame = document.getElementById('proFrame');
         if (frame && frame.contentWindow && typeof frame.contentWindow.postMessage === 'function') {
-          try { frame.contentWindow.postMessage(payload, '*'); } catch (_) {}
+          try { frame.contentWindow.postMessage(payload, window.location.origin); } catch (_) {}
         }
         if (this._csChannel) {
           try { this._csChannel.postMessage(payload); } catch (_) {}
@@ -3621,6 +3634,7 @@
           this.toast('Match tools are available to the team staff.');
           return;
         }
+        if (tab !== AppState.activeTab) this._proOpenRequest++;
         AppState.activeTab = tab;
         ['pitch', 'live', 'roster', 'stats', 'hub'].forEach(t => {
           const sec = document.getElementById('section_' + t);
@@ -5366,7 +5380,7 @@
           badge.className = isOnline
             ? 'text-[10px] px-2 py-0.5 rounded-full bg-cyber-mint/20 text-cyber-mint border border-cyber-mint/30 font-bold'
             : 'text-[10px] px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30 font-bold';
-          badge.innerText = isOnline ? '🌐 Connected — Ready for Cloud Sync' : '⚡ 100% Offline Ready (Zero Internet Needed)';
+          badge.innerText = isOnline ? '🌐 Connected — Ready for Cloud Sync' : '⚡ Offline — using this device';
         }
       },
       deleteMatchHistory(matchId) {
@@ -6969,23 +6983,38 @@
         if (typeof this.renderWizardSquad === 'function') this.renderWizardSquad();
         if (typeof this.renderWizardLineup === 'function') this.renderWizardLineup();
       },
-      PRO_URL: 'https://fracturedorbit1980.github.io/Football/pro/',
+      async canOpenProOffline(entryUrl) {
+        try {
+          const registration = await navigator.serviceWorker.getRegistration(entryUrl);
+          const stores = await this.offlineCachesFor(registration, new URL('../', entryUrl).href);
+          const find = async url => {
+            for (const cache of stores) {
+              const response = await cache.match(url);
+              if (response) return response;
+            }
+          };
+          const entry = await find(entryUrl);
+          if (!entry?.ok) return false;
+          const doc = new DOMParser().parseFromString(await entry.text(), 'text/html');
+          const scripts = [...doc.querySelectorAll('script[src]')];
+          if (!scripts.length) return false;
+          for (const script of scripts) {
+            const url = new URL(script.getAttribute('src'), entryUrl);
+            if (!url.href.startsWith(entryUrl)) return false;
+            const response = await find(url.href);
+            if (!response?.ok || !/javascript|ecmascript/i.test(response.headers.get('Content-Type') || '')) return false;
+          }
+          return true;
+        } catch (_) { return false; }
+      },
       openProUpgrade(event) {
-        // Pro is an online product, so it loads in the in-app shell and the pane keeps the Lite
-        // address. The anchor href stays as the fallback when this handler cannot run.
-        const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
-        const notes = ['upgradeProOffline', 'proToggleNote'].map(id => document.getElementById(id));
-        if (offline) {
-          if (event) event.preventDefault();
-          notes.forEach(note => { if (note) note.classList.remove('hidden'); });
-          return false;
-        }
-        if (event) event.preventDefault();
-        notes.forEach(note => { if (note) note.classList.add('hidden'); });
+        event?.preventDefault();
+        this._proLauncher = event?.currentTarget || document.activeElement;
         this.openProShell(false);
         return false;
       },
-      _proHistory: false,
+      _proOpenRequest: 0,
+      _proLauncher: null,
       _proScrollY: 0,
       // Pro covers the row, but the page behind it stays in the tab order, so the segments have to
       // stop claiming Lite is the view that is showing.
@@ -7001,11 +7030,22 @@
         paint(lite, !proActive);
         paint(pro, proActive);
       },
-      openProShell(fromHistory) {
+      async openProShell(fromHistory) {
         const shell = document.getElementById('proShell');
         const frame = document.getElementById('proFrame');
-        if (!shell || !frame) return;
-        if (shell.style.display === 'flex') return;
+        if (!shell || !frame || shell.style.display === 'flex') return;
+        const request = ++this._proOpenRequest;
+        const entryUrl = document.getElementById('brandSwitch').href;
+        const available = navigator.onLine || await this.canOpenProOffline(entryUrl);
+        // Ignore an offline lookup that finishes after another launch, tab switch, or close.
+        if (request !== this._proOpenRequest || (fromHistory && !history.state?.csProShell)) return;
+        for (const id of ['upgradeProOffline', 'proToggleNote']) {
+          document.getElementById(id).classList.toggle('hidden', available);
+        }
+        if (!available) return;
+        if (fromHistory && !this._proLauncher) {
+          this._proLauncher = document.getElementById(history.state.csProLauncher || 'brandSwitch');
+        }
         // Refresh the same-origin snapshot before Pro reads it, including on shell reopen.
         if (!this.publishLiteRoster()) return;
         this.publishLiteMatches();
@@ -7013,17 +7053,14 @@
           this.postSyncToPro();
         };
         if (!frame.getAttribute('src')) {
-          frame.setAttribute('src', this.PRO_URL);
+          frame.src = entryUrl;
         } else {
           this.postSyncToPro();
         }
-        if (!fromHistory) {
+        if (!fromHistory && !history.state?.csProShell) {
           try {
-            history.pushState({ csProShell: true }, '');
-            this._proHistory = true;
-          } catch (err) {
-            this._proHistory = false;
-          }
+            history.pushState({ ...history.state, csProShell: true, csProLauncher: this._proLauncher?.id }, '');
+          } catch (_) {}
         }
         this._proScrollY = window.scrollY || 0;
         shell.style.display = 'flex';
@@ -7034,6 +7071,7 @@
         if (back) back.focus();
       },
       closeProShell(fromHistory) {
+        this._proOpenRequest++;
         const shell = document.getElementById('proShell');
         if (!shell || shell.style.display !== 'flex') return;
         shell.style.display = 'none';
@@ -7041,16 +7079,14 @@
         document.body.style.overflow = '';
         this.setViewTabState(false);
         window.scrollTo(0, this._proScrollY || 0);
-        const pushed = this._proHistory;
-        this._proHistory = false;
-        // Undo the pushed entry only for in-app closes; a popstate close already consumed it.
-        if (!fromHistory && pushed) {
+        if (!fromHistory && history.state?.csProShell) {
           try { history.back(); } catch (err) { /* history unavailable */ }
         }
         // Seamlessly ingest changes made by coach in Pro Web while shell was open
         this.applySharedRoster(true);
         this.applySharedMatches(true);
         this.renderAll();
+        (this._proLauncher || document.getElementById('brandSwitch')).focus({ preventScroll: true });
       },
       closeModals() {
         AppState.editingPlayerId = null;
@@ -7186,14 +7222,12 @@
       App.init();
       const proBack = document.getElementById('proBackBtn');
       if (proBack) proBack.addEventListener('click', () => App.closeProShell(false));
+      window.addEventListener('pagehide', () => { App._proOpenRequest++; });
       window.addEventListener('popstate', event => {
-        const shell = document.getElementById('proShell');
-        if (shell && shell.style.display === 'flex') {
-          App.closeProShell(true);
-          return;
-        }
-        if (event.state && event.state.csProShell) App.openProShell(true);
+        if (event.state?.csProShell) App.openProShell(true);
+        else App.closeProShell(true);
       });
+      if (history.state?.csProShell) App.openProShell(true);
       document.addEventListener('keydown', event => {
         if (event.key === 'Escape') App.closeProShell(false);
       });

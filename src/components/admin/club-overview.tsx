@@ -168,8 +168,11 @@ export function ClubOverview() {
           </Card>
         ))}
       </div>
-      <Button type="button" variant="outline" size="lg" className="mt-4 h-11" onClick={() => resetClub()}>
-        Restore official library
+      <Button type="button" variant="outline" size="lg" className="mt-4 h-11" disabled={!current} onClick={() => {
+        if (!current || !window.confirm(`Reset ${current.name} on this device and restore the official drill library? This permanently clears its players, teams, coaches, fee records, ratings, attendance, saved sessions, matches and custom drills.`)) return;
+        if (useClubLibrary.getState().activeId === current.id && useClubStore.getState().hydrated) resetClub();
+      }}>
+        Reset club and restore official library
       </Button>
     </div>
   );

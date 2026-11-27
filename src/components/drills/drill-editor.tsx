@@ -313,11 +313,11 @@ function DrillEditorForm({ requestedId }: { requestedId: string | null }) {
 
   function clearSlide() {
     if (shown.pieces.length === 0 && shown.marks.length === 0) return;
+    if (!window.confirm(`Clear all pieces and markings from frame ${safeIndex + 1}?`)) return;
     remember();
-    const index = safeIndex;
     setBoard((current) => ({
       ...current,
-      frames: current.frames.map((item, itemIndex) => (itemIndex === index ? { ...item, pieces: [], marks: [] } : item)),
+      frames: current.frames.map((item) => (item.id === shown.id ? { ...item, pieces: [], marks: [] } : item)),
     }));
     setSelectedId(null);
     setDraft(null);

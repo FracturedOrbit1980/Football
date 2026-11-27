@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ageLabel, sortByAge } from "@/lib/club/age";
 import { formatPosition } from "@/lib/club/positions";
 import type { ClubPlayer } from "@/lib/club/seed";
-import { formatDay } from "@/lib/club/week";
+import { formatDate, formatDay } from "@/lib/club/week";
 import { useClubStore } from "@/stores/club-store";
 
 function devicePlayerKey() {
@@ -230,7 +230,7 @@ export function PlayerHome() {
                 <li key={item.id} className="flex items-center justify-between gap-3 rounded-lg bg-slate-100 px-3 py-3">
                   <span>
                     <span className="block font-semibold text-slate-950">{item.detail}</span>
-                    <span className="text-sm text-slate-600">{item.when}</span>
+                    <span className="text-sm text-slate-600">{formatDate(item.when)}</span>
                   </span>
                   <Badge variant={item.status === "Present" ? "default" : "outline"}>{item.status}</Badge>
                 </li>

@@ -30,15 +30,17 @@ import { ROLE_HOME, ROLE_LABEL, type UserRole } from "@/lib/auth/roles";
 import { DEFAULT_CLUB_ID } from "@/lib/club/registry";
 import { activeClub, useClubLibrary } from "@/stores/club-library";
 
-const ADMIN_NAV: { href: string; label: string; icon: typeof Users }[] = [
+type NavItem = { href: string; label: string; short?: string; icon: typeof Users };
+
+const ADMIN_NAV: NavItem[] = [
   { href: "/admin", label: "Club", icon: LayoutDashboard },
   { href: "/admin/people", label: "People", icon: Users },
   { href: "/admin/members", label: "Members", icon: ContactRound },
-  { href: "/admin/accounting", label: "Accounting", icon: Wallet },
+  { href: "/admin/accounting", label: "Accounting", short: "Fees", icon: Wallet },
   { href: "/admin/drills", label: "Drills", icon: Library },
 ];
 
-const NAV: Record<UserRole, { href: string; label: string; icon: typeof Users }[]> = {
+const NAV: Record<UserRole, NavItem[]> = {
   DEVELOPER: ADMIN_NAV,
   SUPER_ADMIN: ADMIN_NAV,
   HEAD_COACH: [
@@ -50,8 +52,6 @@ const NAV: Record<UserRole, { href: string; label: string; icon: typeof Users }[
   ],
   PLAYER: [{ href: "/player", label: "My game", icon: Users }],
 };
-
-type NavItem = { href: string; label: string; icon: typeof Users };
 
 const CLOUD_NAV: (NavItem & { roles: ClubRole[] })[] = [
   { href: "/club", label: "Club", icon: LayoutDashboard, roles: ["CLUB_ADMIN", "COACH", "TEAM_MANAGER", "FITNESS"] },
@@ -118,14 +118,14 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="flex shrink-0 items-center gap-2">
           <a
             href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/lite/`}
-            className="rounded-lg bg-emerald-500/20 border border-emerald-500/30 px-2.5 py-1 text-xs font-bold text-emerald-300 hover:bg-emerald-500/30 active:scale-95 transition"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg bg-emerald-500/20 border border-emerald-500/30 px-2 text-xs font-bold text-emerald-300 hover:bg-emerald-500/30 active:scale-95 transition"
             title="Open Clubstride Lite Pitch-Side Tool"
           >
             ⚡ Lite
           </a>
           <a
             href={`${process.env.NEXT_PUBLIC_BASE_PATH || ""}/pro/`}
-            className="rounded-lg bg-amber-500/20 border border-amber-500/30 px-2.5 py-1 text-xs font-bold text-amber-300 hover:bg-amber-500/30 active:scale-95 transition"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg bg-amber-500/20 border border-amber-500/30 px-2 text-xs font-bold text-amber-300 hover:bg-amber-500/30 active:scale-95 transition"
             title="Open Clubstride Pro Suite"
           >
             ⭐ Pro
@@ -212,7 +212,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </main>
 
       {items.length > 0 ? (
-        <nav className="app-chrome fixed inset-x-0 bottom-0 z-30 grid border-t border-white/10 md:hidden" style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}>
+        <nav aria-label="Main navigation" className="app-chrome fixed inset-x-0 bottom-0 z-30 grid auto-cols-[minmax(3.25rem,1fr)] grid-flow-col overflow-x-auto border-t border-white/10 pb-[env(safe-area-inset-bottom)] md:hidden">
           {items.map((item) => {
             const Icon = item.icon;
             const active = isActive(pathname, item.href);
@@ -220,12 +220,14 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex min-h-16 flex-col items-center justify-center gap-1 text-xs font-bold ${
+                aria-label={item.short ? `${item.short} (${item.label})` : item.label}
+                aria-current={active ? "page" : undefined}
+                className={`flex min-h-16 flex-col items-center justify-center gap-1 px-1 text-center text-xs font-bold ${
                   active ? "text-emerald-300" : "text-white/75"
                 }`}
               >
                 <Icon className="size-5" />
-                {item.label}
+                {item.short ?? item.label}
               </Link>
             );
           })}
