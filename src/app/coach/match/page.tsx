@@ -9,7 +9,7 @@ export default function MatchPage() {
       <PageHeader
         className="match-title"
         title="Live match"
-        description="Pick a shape for the age group. The count includes the goalkeeper. Then start the clock and substitute from the bench. Minutes count only for players on the pitch."
+        description="Pick a shape, start the clock, then tap a pitch player and a bench player to substitute."
       />
       <LiveMatchTracker />
     </div>

@@ -476,6 +476,8 @@ function MemberPanel({ player }: { player: ClubPlayer }) {
           addCorrespondence(player.id, "Note", `Payment agreement of ${rand(plan.instalments.reduce((sum, item) => sum + item.amount, 0))} over ${plan.instalments.length} instalments agreed.`);
         }}
         onRemove={() => {
+          if (!window.confirm(`Cancel the payment agreement for ${player.name}? Recorded payments will stay on the account.`)) return;
+          if (!useClubStore.getState().players.includes(player)) return;
           setPaymentPlan(player.id, null);
           addCorrespondence(player.id, "Note", "Payment agreement cancelled.");
         }}
@@ -489,6 +491,8 @@ function MemberPanel({ player }: { player: ClubPlayer }) {
           addCorrespondence(player.id, "Call", `Promised ${rand(promise.amount)} by ${formatDay(promise.date)}.`);
         }}
         onRemove={() => {
+          if (!window.confirm(`Remove the payment promise for ${player.name}? Recorded payments will stay on the account.`)) return;
+          if (!useClubStore.getState().players.includes(player)) return;
           setPromiseToPay(player.id, null);
           addCorrespondence(player.id, "Note", "Promise to pay removed.");
         }}

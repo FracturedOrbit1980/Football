@@ -41,15 +41,39 @@ export function ClubStart() {
 
   return (
     <div className="grid items-start gap-10 lg:grid-cols-2 lg:gap-14">
-      <div>
+      <header className="lg:col-span-2">
       <p className="text-sm font-bold uppercase tracking-widest text-emerald-700">Club</p>
       <h1 className="mt-2 break-words text-[clamp(1.85rem,1.2rem+2.2vw,3.25rem)] font-black leading-[1.12] tracking-tight text-slate-950">{current ? current.name : "Load a club"}</h1>
-      <p className="mt-4 max-w-xl text-lg leading-relaxed text-slate-700">
+      <p className="mt-2 max-w-xl text-base text-slate-700">
         {clubScope
-          ? "This sign-in only shows your club. Sign out to open another one; registering a second club needs a Developer sign-in."
-          : "Choose a club to open. Players, teams, drills, attendance, and the colours stay with that club."}
+          ? "Sign out to open a different club."
+          : "Choose a role for the loaded club, or select another club below."}
       </p>
-      <div className="mt-8 rounded-2xl bg-slate-900 text-white p-5 sm:p-6 ring-1 ring-white/10 space-y-4">
+      </header>
+      <div className="grid min-w-0 content-start gap-6">
+        {current ? (
+          <section aria-label={`Open ${current.name}`}>
+            <RolePicker />
+          </section>
+        ) : (
+          <p>Load {CLUB_NAME}, or register a club, before you open a role.</p>
+        )}
+        {canRegisterClub ? (
+          <details className="rounded-2xl bg-white px-5 ring-1 ring-slate-300">
+            <summary className="min-h-11 cursor-pointer py-3 font-bold">Register a club</summary>
+            <div className="pb-5">
+              <p className="text-sm text-slate-600">Registration covers one club. Its players, fees and statements stay with that club.</p>
+              <ClubForm submitLabel="Register club" onSubmit={(input) => void addClub(input)} />
+            </div>
+          </details>
+        ) : !role && registeredClubs.length > 0 ? (
+          <p className="text-sm text-slate-600" data-one-club-note>
+            {registeredClubs[0].name} is registered on this device. Sign in as a Developer to register another club.
+          </p>
+        ) : null}
+      </div>
+      <div className="min-w-0">
+      <div className="rounded-2xl bg-slate-900 text-white p-5 sm:p-6 ring-1 ring-white/10 space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400">Integrated Ecosystem</span>
@@ -182,38 +206,6 @@ export function ClubStart() {
           </article>
         ))}
       </div>
-      </div>
-      <div className="grid content-start gap-8">
-      {current ? (
-        <div>
-          <h2 className="text-lg font-black text-slate-950">Open {current.name}</h2>
-          <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">Choose a role to open this club.</p>
-          <div className="mt-4">
-            <RolePicker />
-          </div>
-        </div>
-      ) : (
-        <p className="text-base font-semibold text-slate-700">Load {CLUB_NAME}, or register a club, before you open a role.</p>
-      )}
-      {canRegisterClub ? (
-        <section className="rounded-2xl bg-white p-5 ring-1 ring-slate-300 sm:p-6" aria-label="Register a club">
-          <h2 className="text-lg font-black text-slate-950">Register a club</h2>
-          <p className="mt-2 text-sm font-medium leading-relaxed text-slate-600">
-            Registration covers one club only. Its players, fees, statements and colours stay with that club.
-          </p>
-          <ClubForm
-            submitLabel="Register club"
-            onSubmit={(input) => {
-              void addClub(input);
-            }}
-          />
-        </section>
-      ) : !role && registeredClubs.length > 0 ? (
-        <p className="rounded-2xl bg-white p-5 text-sm font-medium leading-relaxed text-slate-600 ring-1 ring-slate-300" data-one-club-note>
-          {registeredClubs[0].name} is registered on this device. Registration covers one club only, so sign in as a
-          Developer to register another.
-        </p>
-      ) : null}
       </div>
     </div>
   );

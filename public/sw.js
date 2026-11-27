@@ -1,80 +1,52 @@
-/* Football service worker. scripts/build-sw.mjs replaces __BUILD__ and __PRECACHE__ in out/sw.js after `next build`.
-   Paths are relative to the registration scope, so it works under /Football/ (GitHub Pages) and at /.
-   Only same-origin app files are cached. Supabase and other cross-origin requests (personal data) are never cached. */
+/* Football's build replaces the version and list of exported files in this worker. */
 const VERSION = "__BUILD__";
 const PRECACHE = /** @type {string[]} */ (__PRECACHE__);
-const SHELL = `shell-${VERSION}`;
-const RUNTIME = `runtime-${VERSION}`;
 const scope = new URL(self.registration.scope);
-const at = (path) => new URL(path, scope).toString();
+const cachePrefix = `clubstride-football:${encodeURIComponent(scope.pathname)}:`;
+const cacheName = cachePrefix + VERSION;
+const urls = PRECACHE.map((path) => new URL(path, scope).href);
+const exported = new Set(urls);
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(SHELL).then(async (cache) => {
-      // Add one by one so a single missing file does not abort the install.
-      await Promise.all(PRECACHE.map((path) => cache.add(at(path)).catch(() => undefined)));
-      await self.skipWaiting();
-    }),
-  );
+  // Activate only when the new export can open offline. A failed update leaves the old worker active.
+  const requests = urls.map((url) => new Request(url, { cache: "reload" }));
+  event.waitUntil(caches.open(cacheName).then((cache) => cache.addAll(requests)).then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    caches
-      .keys()
-      .then((keys) => Promise.all(keys.filter((key) => key !== SHELL && key !== RUNTIME).map((key) => caches.delete(key))))
-      .then(() => self.clients.claim()),
-  );
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.filter((key) => key.startsWith(cachePrefix) && key !== cacheName)
+      .map((key) => caches.delete(key)));
+    await self.clients.claim();
+  })());
 });
 
-async function fromCache(request) {
-  return (await caches.match(request, { ignoreSearch: request.mode === "navigate" })) ?? undefined;
-}
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "clubstride-offline-caches") {
+    event.ports[0]?.postMessage({ cacheNames: [cacheName] });
+  }
+});
 
-async function networkFirstPage(request) {
-  try {
-    const response = await fetch(request);
-    if (response.ok) (await caches.open(RUNTIME)).put(request, response.clone());
-    return response;
-  } catch {
-    const url = new URL(request.url);
-    const withSlash = url.pathname.endsWith("/") ? url.pathname : `${url.pathname}/`;
-    return (
-      (await fromCache(request)) ??
-      (await caches.match(url.origin + withSlash)) ??
-      (await caches.match(url.origin + withSlash + "index.html")) ??
-      (await caches.match(at("index.html"))) ??
-      (await caches.match(at(""))) ??
-      new Response("Offline", { status: 503, headers: { "Content-Type": "text/plain" } })
-    );
+function exportedURL(request) {
+  const url = new URL(request.url);
+  if (url.origin !== scope.origin || !url.pathname.startsWith(scope.pathname)) return;
+  const path = url.origin + url.pathname;
+  if (exported.has(path)) return path;
+  if (request.mode === "navigate") {
+    const directory = path.endsWith("/index.html") ? path.slice(0, -"index.html".length) : path + "/";
+    if (exported.has(directory)) return directory;
   }
 }
 
-async function cacheFirst(request) {
-  const hit = await caches.match(request);
-  if (hit) return hit;
-  const response = await fetch(request);
-  if (response.ok) (await caches.open(RUNTIME)).put(request, response.clone());
-  return response;
-}
-
-async function staleWhileRevalidate(request) {
-  const hit = await caches.match(request);
-  const network = fetch(request)
-    .then(async (response) => {
-      if (response.ok) (await caches.open(RUNTIME)).put(request, response.clone());
-      return response;
-    })
-    .catch(() => undefined);
-  return hit ?? (await network) ?? new Response("", { status: 504 });
+async function serve(request, key) {
+  const cache = await caches.open(cacheName);
+  // Each page must load the scripts from the same successfully installed export.
+  return await cache.match(key) || fetch(request);
 }
 
 self.addEventListener("fetch", (event) => {
-  const request = event.request;
-  if (request.method !== "GET") return;
-  const url = new URL(request.url);
-  if (url.origin !== scope.origin || !url.pathname.startsWith(scope.pathname)) return;
-  if (request.mode === "navigate") return event.respondWith(networkFirstPage(request));
-  if (url.pathname.includes("/_next/static/")) return event.respondWith(cacheFirst(request));
-  event.respondWith(staleWhileRevalidate(request));
+  if (event.request.method !== "GET" || event.request.headers.has("range")) return;
+  const key = exportedURL(event.request);
+  if (key) event.respondWith(serve(event.request, key));
 });

@@ -144,10 +144,6 @@ interface ClubState extends ClubData {
   resetClub: () => void;
 }
 
-function todayLabel() {
-  return new Date().toLocaleDateString("en-ZA", { day: "numeric", month: "short" });
-}
-
 const CORRESPONDENCE_CHANNELS = new Set<CorrespondenceChannel>([
   "Registration",
   "Print",
@@ -617,7 +613,7 @@ export const useClubStore = create<ClubState>()(
               teamId,
               title,
               drillIds,
-              savedOn: todayLabel(),
+              savedOn: todayIso(),
             },
             ...state.sessions,
           ],
@@ -640,7 +636,7 @@ export const useClubStore = create<ClubState>()(
         const existing = state.matches.find((match) => match.id === matchId);
         if (existing && (existing.teamId !== teamId || (existing.clubId && existing.clubId !== clubId))) return false;
         set((current) => {
-          const playedOn = existing?.playedOn ?? todayLabel();
+          const playedOn = existing?.playedOn ?? todayIso();
           const match: SavedMatch = { ...existing, ...extra, id: matchId, clubId, teamId, opponent: opponent.trim(), playedOn, updatedAt: new Date().toISOString(),
             minutes: minutes.map((row) => ({ ...row })) };
           const attendance: AttendanceRecord[] = minutes.map((row) => ({

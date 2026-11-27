@@ -129,12 +129,9 @@ device, even in club mode.
 - When the notice text changes, bump `PRIVACY_POLICY_VERSION` in `src/lib/privacy.ts` and the default in `club_privacy.policy_version`.
 
 ### Offline
-`npm run build` runs `scripts/build-sw.mjs`, which writes `out/sw.js` with every exported page and `_next/static` asset to precache. It registers under the base path scope (`/Football/`).
-- Pages use the network first and fall back to the cache.
-- Static assets are served from the cache first.
-- Supabase requests are never cached.
+Open Football online once and let its offline download finish. The installed copy can then open the drill library, match clock, Lite and Pro without a connection. Lite shows its own offline status and can open the cached Pro squad.
 
-The drill library, editor and live match keep working with no connection.
+`npm run build` generates `out/sw.js` with the exported pages, navigation files and app assets. Football serves a complete version until an update finishes downloading. Football and Lite manage separate caches under their installation paths. Cloud sign-in and sync still require a connection.
 
 ### Sync (club mode only; demo mode stays on the device)
 - Drills you create and saved matches are written locally, queued in IndexedDB (`football-sync`) and pushed to `club_drills` / `club_matches` when online. Each record holds formation, minutes, substitutions, events and score. Built-in library drills are not synced.
@@ -235,8 +232,8 @@ NEXT_PUBLIC_BASE_PATH=/Football npm run test:e2e
 The expanded suite covers scoped running/paused/club switches, reload and retry
 saves, open-tab transfers and saved-team refresh, loaded-app offline timing and
 archive recovery, weekly feedback, and a generated local statement (printing is
-stubbed). Service-worker installation/offline navigation and live authentication
-are outside these tests.
+stubbed). A separate Chromium suite enables real service workers to check offline
+navigation, updates and recovery. Browser tests use fictional clubs and demo mode.
 
 ## Combined integration provenance
 
